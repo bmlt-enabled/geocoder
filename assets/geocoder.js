@@ -108,7 +108,7 @@ const GetGeoAddress = (address) => {
         document.getElementById('bmlt_tools_placemark_count').innerHTML = '';
         g_pm_index = 0;
         g_pm_index_max = 0;
-        geocoder.geocode({ address: f_address }, (results, status) => {
+        geocoder.geocode({address: f_address}, (results, status) => {
             if (status === google.maps.GeocoderStatus.OK) {
                 GeoCallback(results[0]);
             }
@@ -273,7 +273,7 @@ const SetUpMap = (in_map_center) => {
             }
 
             g_map = new google.maps.Map(document.getElementById('bmlt_tools_map_div'), {
-                center: { lat: latitude, lng: longitude },
+                center: {lat: latitude, lng: longitude},
                 zoom: 15,
                 draggableCursor: 'crosshair',
                 mapId: "Geocodez"
@@ -398,21 +398,27 @@ const TraverseJSONTree = () => {
     const js_traverse = (in_object) => {
         let tabs = '';
         const type = typeof in_object;
-        if (type === "object") {
+        if (type === "object" && in_object !== null) {
             indent++;
             for (let c = 1; c < indent; c++) {
                 tabs += "&middot;&middot; ";
             }
             for (const key in in_object) {
-                if (json_string) {
-                    json_string += "\n";
-                }
-                json_string += `${tabs}${key.toString()}: `;
+                if (Object.prototype.hasOwnProperty.call(in_object, key)) {
+                    if (json_string) {
+                        json_string += "\n";
+                    }
+                    json_string += `${tabs}${key.toString()}: `;
 
-                js_traverse(in_object[key]);
+                    if (typeof in_object[key] === "object" && in_object[key] !== null) {
+                        js_traverse(in_object[key]);
+                    } else if (typeof in_object[key] !== "function") {
+                        json_string += in_object[key].toString();
+                    }
+                }
             }
             indent--;
-        } else {
+        } else if (type !== "function") {
             json_string += in_object.toString();
         }
 
