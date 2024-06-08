@@ -7,11 +7,10 @@ let g_pm_index = 0;
 let g_pm_index_max = 0;
 let g_focused_element = null;
 let lets_go = true;
-
 let g_map = null;
 let g_marker_set = null;
 let g_marker_response = null;
-const g_map_zoom = 4;
+let g_map_zoom = 4;
 
 const image1 = document.createElement("img");
 image1.src = "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png";
@@ -37,7 +36,6 @@ function GeocodeInitializeOnLoad() {
             document.getElementById('bmlt_tools_where_am_i').style.display = 'block';
         }
         ClearLookupResults();
-        DrawAccuracyScale();
         ClearAddressForm();
         if (g_show_long_lat_info && g_show_map_checkbox) {
             document.getElementById('bmlt_tools_map_checkbox').checked = false;
@@ -58,38 +56,6 @@ const DisplayLongLat = () => {
         document.getElementById('bmlt_tools_address_long_lat').style.display = 'block';
         document.getElementById('bmlt_tools_transfer_long_lat').style.display = 'block';
         document.getElementById('bmlt_tools_lookup_long_lat_line').style.display = 'block';
-    }
-};
-
-const SetAccuracyValue = (inAcc) => {
-    let scale_indicator = document.getElementById('bmlt_tools_accuracy_scale');
-    if (!scale_indicator) {
-        DrawAccuracyScale();
-        scale_indicator = document.getElementById('bmlt_tools_accuracy_scale');
-    }
-    if (scale_indicator) {
-        scale_indicator.className = ((inAcc >= 0) && (inAcc < 10)) ? `acc${inAcc}` : 'accDisabled';
-    }
-};
-
-const DrawAccuracyScale = () => {
-    if (!document.getElementById('bmlt_tools_accuracy_scale')) {
-        const par = document.getElementById('bmlt_tools_accuracy_gradient');
-        if (par) {
-            for (let i = 1; i < 300; i += 3) {
-                const nod = document.createElement("div");
-                if (nod) {
-                    nod.className = 'line';
-                    par.appendChild(nod);
-                }
-            }
-            const slider = document.createElement("div");
-            if (slider) {
-                slider.id = 'bmlt_tools_accuracy_scale';
-                slider.className = 'accDisabled';
-                par.appendChild(slider);
-            }
-        }
     }
 };
 
@@ -128,8 +94,7 @@ const FormSubmitted = () => {
 
 const UpdateAddressString = () => {
     const fields = ['street', 'other', 'borough', 'town', 'county', 'state', 'zip', 'nation'];
-    const final_string = fields.map(field => trim_str(document.getElementById(`bmlt_tools_address_${field}`).value)).filter(Boolean).join(', ');
-    document.getElementById('bmlt_tools_address_string').innerHTML = final_string;
+    document.getElementById('bmlt_tools_address_string').innerHTML = fields.map(field => trim_str(document.getElementById(`bmlt_tools_address_${field}`).value)).filter(Boolean).join(', ');
 };
 
 const GetGeoAddress = (address) => {
@@ -157,7 +122,6 @@ const ClearLookupResults = () => {
         document.getElementById(`bmlt_tools_lookup_address_${field}`).innerHTML = '&nbsp;';
     });
     document.getElementById('bmlt_tools_goo_go').style.display = 'none';
-    document.getElementById('bmlt_tools_accuracy_display').style.display = 'none';
     document.getElementById('bmlt_tools_address_transfer_container').style.display = 'none';
     document.getElementById('bmlt_tools_placemark_rotator_controls').style.display = 'none';
     document.getElementById('bmlt_tools_goo_go_a').href = null;

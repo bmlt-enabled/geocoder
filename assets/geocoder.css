@@ -302,27 +302,6 @@ a:active {
     text-align: center;
 }
 
-#bmlt_tools_main_container #bmlt_tools_accuracy_label {
-    height: 20px;
-    line-height: 20px;
-    font-weight: bold;
-    margin-left: 20px;
-}
-
-/* This is the gradient that displays the accuracy of the geolocator response */
-#bmlt_tools_main_container .bmlt_tools_accuracy_gradient {
-    float: left;
-    width: 300px;
-    height: 10px;
-    border: 1px solid black;
-    margin-top: 5px;
-    margin-bottom: 25px;
-    margin-left: auto;
-    margin-right: auto;
-    background-color: #ffc;
-    padding-left: 2px;
-}
-
 #bmlt_tools_main_container .bmlt_tools_acc_min,
 #bmlt_tools_main_container .bmlt_tools_acc_max {
     float: left;
@@ -339,75 +318,6 @@ a:active {
     font-size: large;
     font-style: italic;
     color: #777;
-}
-
-/* This is the accuracy indicator that moves around the bar. */
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale {
-    width: 4px;
-    height: 12px;
-    border-color: #555;
-    border-style: solid;
-    border-top-width: 2px;
-    border-bottom-width: 2px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    position: relative;
-    top: -3px;
-}
-
-/* Each line in the gradient is one pixel wide. */
-#bmlt_tools_main_container #bmlt_tools_accuracy_gradient .line {
-    width: 2px;
-    height: 5px;
-    margin-top: 5px;
-    float: left;
-    border-left: 1px solid #555;
-}
-
-/* The scale can be hidden. */
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.accDisabled {
-    display: none;
-}
-
-/* We use CSS to set the position. There are 10 possible values. */
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc0 {
-    left: 0px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc1 {
-    left: 33px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc2 {
-    left: 66px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc3 {
-    left: 99px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc4 {
-    left: 132px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc5 {
-    left: 165px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc6 {
-    left: 198px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc7 {
-    left: 231px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc8 {
-    left: 264px;
-}
-
-#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc9 {
-    left: 297px;
 }
 
 #bmlt_tools_main_container #bmlt_tools_where_am_i {
