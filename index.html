@@ -1,1859 +1,240 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
-		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-		<meta http-equiv="Content-Script-Type" content="text/javascript" />
-		<meta http-equiv="Content-Style-Type" content="text/css" />
-		<link rel="shortcut icon" type="image/png" href="https://bmlt.app/wp-content/uploads/2020/08/cropped-BMLTe-logo-1-32x32.png">
-		<!--
-			-------------------------------------------------------------------------------------------------------------------------
-			GOOGLE MAPS GEOCODER TOOL.
-			
-			This is a very simple tool that is meant to be a "workshop" for address lookups, using the Google JavaScript Geocode API.
-			
-			It has two boxes:
-			
-				Address Entry Form
-					This form is on the left, and contains a bunch of text input fields.
-					You enter the address into these fields, and the string below them shows how the address is being "built."
-					When you submit the form, a Google Geocode is done, using the "built" address. You can also enter a long/lat pair,
-					and do a reverse geocode.
-				
-				Geocode Response Display
-					This is on the right side, and displays the result of the lookup. It displays them as simple <div> elements.
-					Between the two forms is a column of links that allows you to copy data from the response to the corresponding
-					text input in the Entry form.
-					You will also have a link in the response form that allows you to go to Google Maps to observe the location there.
-					If there are more than one places that correspond to the given data, they are displayed, one at a time, and links
-					are provided to help you select which one is displayed.
-			-------------------------------------------------------------------------------------------------------------------------
-			Version: 1.3.0
-			
-			RELEASE NOTES:
-				- May 31, 2019 -1.3.0 Release
-					- Initial convert to Google Maps API V3.
-
-				- April 30, 2010 -1.2.3 Release
-					- Added scroll wheel zoom to the map.
-					
-				- March 26, 2010 -1.2.2 Release
-					- The accuracy bar fix was not sufficient. It needed more.
-					
-				- March 11, 2010 -1.2.1 Release
-					- Fixed a CSS bug in the accuracy bar.
-					
-				- February 11, 2010 -1.2 Release
-					- Added access to the W3C Gelocator options ("Where Am I Now?")
-					
-				- February 6, 2010 -1.1.9 Release
-					- Worked on optimizing and improving the appearance of the accuracy bar.
-					
-				- February 5, 2010 -1.1.8 Release
-					- Fixed a CSS bug in that bar.
-					
-				- February 5, 2010 -1.1.7 Release
-					- Added accuracy bar indicator to search results.
-					
-				- February 4, 2010 -1.1.6 Release
-					- Added block delimiters ("##START_" and "##END_") to allow parsing by the WordPress Plugin.
-				
-				- February 1, 2010 -1.1.5 Release
-					- Changed the IDs, so this can be more easily inserted into other pages or CMS.
-					
-				- February 1, 2010 -1.1.4 Release
-					- Expanded the label fields, as the text would overflow when increased by one step.
-					
-				- January 31, 2010 -1.1.3 Release
-					- Moved the items around, in order to separate the regular lookup from the reverse lookup.
-					- Added the ability to hide the long/lat information (which also hides the map).
-					
-				- January 31, 2010 -1.1.2 Release
-					- Hide the multiple placemark nav field if there is only one placemark.
-					- Added a "Transfer All" link to the transfer column.
-					- Fixed the styling for the address display field It was a wee bit too wide.
-					
-				- January 29, 2010 -1.1.1 Release
-					- Made some fixes to make TotalValidator happy.
-					- Tweaked the colors to mesh with the marker colors better.
-					- Added links in the debug string, so you can select placemarks from the dump.
-					
-				- January 29, 2010 -1.1 Release
-					- Added an interactive map.
-					
-				- January 28, 2010 - 1.0.3 Release
-					- Fixed a couple of issues with Chrome.
-					- Added an initializer function, and now allow the debug info to be hidden as a choice.
-					
-				- January 28, 2010 - 1.0.2 Release
-					- Added a "focus tracker." This enhances usability by allowing a quick, natural response to hitting the "enter" key.
-					
-				- January 27, 2010 - 1.0.1 Release
-					- Moved the debug display into the main wrapper.
-					- The debug info is now shown or hidden by a checkbox.
-					- Segregated the display of the debug info slightly to enhance readability.
-					- Improved the code comments.
-				
-				- January 27, 2010 - 1.0 Release
-					- Initial release.
-		-->
-		<title>Geolocator Tool</title>
-		<!-- You may need to add your API key here, if you run this from a server. I put 'localhost' in there, to indicate this is for running on a standalone machine. -->
-		<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB9Rpnhy0aqCNiLGF9yHd3Z4X_Humx3Vek" type="text/javascript"></script>
-		<script type="text/javascript">
-		// <![CDATA[
-/*##START_JAVASCRIPT_ALL##*/	
-	/*########################################################################################################################*/
-	/*###################################################### JAVASCRIPT ######################################################*/
-	/*########################################################################################################################*/
-
-		/**
-			These are the various globals we use throughout the script.
-
-			DEBUG HANDLING
-			
-			If the debug is set true (Via the checkbox), then a <pre> element will be displayed that shows the JSON return from Google Maps.
-			Google Maps uses the xAL Version 2.0 DTD as its XML response, and the JSON response uses the same convention.
-			
-				http://www.oasis-open.org/committees/ciq/ciq.html#6
-				
-			This is a very complex, recursive, nested standard, and writing a robust reader for it is a huge job. Since
-			this tool is meant to extract simple US/Canada/Latin America addresses, we filter for certain combinations
-			within the response.
-			
-			The symptom of an unhandled combination is that some, or all of the response fields are not filled in. You can
-			examine the returned data, and write another case handler for the unresolved response.
-		*/
-		/** Static (edited by Webmaster) globals (Preferences) */
-		var	g_show_debug_checkbox = true;	///< If you set this to true, the debug checkbox (and display) will be shown.
-		var	g_show_long_lat_info = true;	///< If you set this to true, the the long/lat and reverse lookup fields will be shown. If false, the map will not be shown.
-		var	g_show_map_checkbox = true;		///< If you set this to true, the map checkbox (and map) will be shown.
-		
-		/** Dynamic (runtime) globals */
-		var geocoder = null;			///< This is the Google geocoder (instance of google.maps.Geocoder).
-		var geocode_response = null;	///< This is the last response received from it (JSON object)
-		var g_pm_index = 0;				///< If multiple placemarks are returned, this indicates which one is being displayed. This is a 1-based index.
-		var g_pm_index_max = 0;			///< If multiple placemarks are being returned, this indicates how many.
-		var	g_focused_element = null;	///< This is the object reference for the currently focused element. It is used to determine whether or not to use a reverse lookup, and to restore the focused element. It is not cleared on blur.
-		var lets_go = true;
-
-		/***************************************************************************************/
-		/**
-			\brief Handles the various onLoad items.
-		*/
-		function GeocodeInitializeOnLoad ( )
-			{
-				// We make sure that the browser can handle Google Maps.
-				if (lets_go)
-					{
-					// Create our geocoder
-					geocoder = new google.maps.Geocoder;
-					document.getElementById('bmlt_tools_address_source_container').style.display = 'block';
-					document.getElementById('bmlt_tools_address_transfer_container').style.display = 'block';
-					document.getElementById('bmlt_tools_address_lookup_container').style.display = 'block';
-					if ( g_show_long_lat_info && g_show_map_checkbox )
-						{
-						document.getElementById('bmlt_tools_map_display').style.display = 'block';
-						};
-					if ( g_show_debug_checkbox )
-						{
-						SetBlankDebugData ();
-						document.getElementById('bmlt_tools_debug_display').style.display = 'block';
-						};
-					
-					// If the browser can handle it, we show the "Where Am I?" button.
-					if ( navigator && navigator.geolocation )
-						{
-						document.getElementById('bmlt_tools_where_am_i').style.display = 'block';
-						};
-					
-					ClearLookupResults ( );
-					DrawAccuracyScale();
-					ClearAddressForm ();
-
-					if ( g_show_long_lat_info && g_show_map_checkbox )
-						{
-						document.getElementById('bmlt_tools_map_checkbox').checked = false;
-						};
-					if ( g_show_debug_checkbox )
-						{
-						document.getElementById('bmlt_tools_debug_checkbox').checked = false;
-						};
-					}
-				else	// None of that stuff is defined if we couldn't create the geocoder.
-					{
-					alert ( 'ERROR: Could not create Geocoder object!' );
-					};
-				
-				DisplayLongLat();
-			};
-		
-		/***************************************************************************************/
-		/**
-			\brief Tool: Trims a string of leading and following spaces/whitespace.
-			
-			\returns a cleaned string.
-		*/
-		function trim_str (
-							in_str	///< The string to be cleaned.
-							)
-			{
-				return in_str.replace(/^\s+/, '').replace(/\s+$/, '');
-			};
-		
-		/***************************************************************************************/
-		/**
-			\brief Display the long/lat controls.
-		*/
-		function DisplayLongLat ( )
-			{
-				if ( g_show_long_lat_info )
-					{
-					document.getElementById('bmlt_tools_address_long_lat' ).style.display = 'block';
-					document.getElementById('bmlt_tools_transfer_long_lat' ).style.display = 'block';
-					document.getElementById('bmlt_tools_lookup_long_lat_line' ).style.display = 'block';
-					};
-			};
-		
-		/***************************************************************************************/
-		/**
-			\brief Moves the accuracy indicator to show the accuracy.
-			
-			The indicator is a relatively-positioned element that is moved by assigning calls names.
-			This makes it more robust for cross-browser support.
-		*/
-		function SetAccuracyValue(
-									inAcc	///< An integer, the accuracy value (0-9).
-									)
-			{
-				var scale_indicator = document.getElementById('bmlt_tools_accuracy_scale');
-				
-				if ( !scale_indicator )
-					{
-					DrawAccuracyScale();
-					scale_indicator = document.getElementById('bmlt_tools_accuracy_scale');
-					};
-				
-				if ( scale_indicator )
-					{
-					scale_indicator.className = ((inAcc >= 0) && (inAcc<10))?'acc'+inAcc.toString():'accDisabled';
-					};
-			};
-		
-		/***************************************************************************************/
-		/**
-			\brief Outputs a scale to indicate the accuracy.
-			
-			This will be used for the background of the accuracy indicator, which is a 10-step scale (0-9).
-			A bar will be displayed over it to show the accuracy. 98 little "ticks" are shown against a parchment
-			background.
-		*/
-		function DrawAccuracyScale()
-			{
-				// Only do this if we haven't already.
-				if ( !document.getElementById('bmlt_tools_accuracy_scale') )
-					{
-					var	par = document.getElementById('bmlt_tools_accuracy_gradient');
-					
-					if ( par )
-						{
-						for ( var i = 1; i < 300; i+=3 )
-							{
-							var nod = document.createElement ( "div" );
-							if ( nod )
-								{
-								nod.className = 'line';
-								par.appendChild ( nod );
-								};
-							};
-							
-						var slider = document.createElement ( "div" );
-						
-						if ( slider )
-							{
-							slider.id = 'bmlt_tools_accuracy_scale';
-							slider.className = 'accDisabled';
-							par.appendChild ( slider );
-							};
-						};
-					};
-			};
-	
-		/***************************************************************************************/
-		/**
-			\brief Uses the browser's geolocation information to set the long/lat fields in the
-			data entry form.
-			
-			This uses the W3C Gelolocation API (New) to access any location information that the
-			browser wants to share with us (usually an iPhone, Android or Crackberry).
-			
-				http://www.w3.org/TR/geolocation-API/
-		*/
-		function WhereAmI()
-			{
-				navigator.geolocation.getCurrentPosition(WhereAmI_CallBackSuccess);
-			};
-	
-	
-		/***************************************************************************************/
-		/**
-			\brief This is the "success" callback. If the browser responds with a position, it
-			is returned here, and the callback will set the long/lat fields in the entry (yellow)
-			form, which will also set the yellow marker.
-			
-			This uses the W3C Gelolocation API (New) to access any location information that the
-			browser wants to share with us (usually an iPhone, Android or Crackberry).
-			
-				http://www.w3.org/TR/geolocation-API/
-		*/
-		function WhereAmI_CallBackSuccess( in_position_object	///< The position of the browser.
-											)
-			{
-				document.getElementById('bmlt_tools_address_long').value = in_position_object.coords.longitude;
-				document.getElementById('bmlt_tools_address_lat').value = in_position_object.coords.latitude;
-				document.getElementById('bmlt_tools_address_lat').focus();
-			};
-			
-	/***********************************************************************************************/
-	/**************************************** ENTRY DISPLAY ****************************************/
-	/***********************************************************************************************/
-		
-		/***************************************************************************************/
-		/**
-			\brief Restores the focus to the last focused item.
-		*/
-		function RestoreFocus ( )
-			{
-			if ( g_focused_element )
-				{
-				g_focused_element.focus();
-				};
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief Clear the left hand (address entry) form.
-		*/
-		function ClearAddressForm ( )
-			{
-				document.getElementById('bmlt_tools_address_street').value = '';
-				document.getElementById('bmlt_tools_address_other').value = '';
-				document.getElementById('bmlt_tools_address_borough').value = '';
-				document.getElementById('bmlt_tools_address_town').value = '';
-				document.getElementById('bmlt_tools_address_county').value = '';
-				document.getElementById('bmlt_tools_address_state').value = '';
-				document.getElementById('bmlt_tools_address_zip').value = '';
-				document.getElementById('bmlt_tools_address_nation').value = '';
-				document.getElementById('bmlt_tools_address_string').innerHTML = '';
-				document.getElementById('bmlt_tools_address_street').focus();
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief This responds to the form being submitted by a return key-type operation it
-			examines which field has the focus, and determines whether or not to do a reverse
-			geocode or a standard geocode.
-		*/
-		function FormSubmitted()
-			{
-			if ( (g_focused_element.id == 'address_long') || (g_focused_element.id == 'address_lat') )
-				{
-				ReverseLookup();
-				}
-			else
-				{
-				GeocodeAddress();
-				};
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief Creates the simple address string, based upon input values.
-			
-			As you type into the inputs in the left-hand form, this is called to read all the
-			values of the input in realtime, and builds a basic address string that is displayed
-			below the inputs. This string is what is sent in for a geocode.
-		*/
-		function UpdateAddressString()
-			{
-				var ad1 = trim_str ( document.getElementById('bmlt_tools_address_street').value );
-				var ad2 = trim_str ( document.getElementById('bmlt_tools_address_other').value );
-				var adb = trim_str ( document.getElementById('bmlt_tools_address_borough').value );
-				var adt = trim_str ( document.getElementById('bmlt_tools_address_town').value );
-				var adc = trim_str ( document.getElementById('bmlt_tools_address_county').value );
-				var ads = trim_str ( document.getElementById('bmlt_tools_address_state').value );
-				var adz = trim_str ( document.getElementById('bmlt_tools_address_zip').value );
-				var adn = trim_str ( document.getElementById('bmlt_tools_address_nation').value );
-				
-				var final_string = '';
-				
-				if ( ad1 )
-					{
-					final_string += ad1;
-					};
-				
-				if ( ad2 )
-					{
-					if ( final_string )
-						{
-						final_string += ' ';
-						};
-					final_string += ad2;
-					};
-				
-				if ( adb )
-					{
-					if ( final_string )
-						{
-						final_string += ', ';
-						};
-					final_string += adb;
-					};
-				
-				if ( adt )
-					{
-					if ( final_string )
-						{
-						final_string += ', ';
-						};
-					final_string += adt;
-					};
-				
-				if ( adc )
-					{
-					if ( final_string )
-						{
-						final_string += ', ';
-						};
-					final_string += adc;
-					};
-				
-				if ( ads )
-					{
-					if ( final_string )
-						{
-						final_string += ', ';
-						};
-					final_string += ads;
-					};
-				
-				if ( adz )
-					{
-					if ( final_string )
-						{
-						final_string += ' ';
-						};
-					final_string += adz;
-					};
-				
-				if ( adn )
-					{
-					if ( final_string )
-						{
-						final_string += ', ';
-						};
-					final_string += adn;
-					};
-				
-				document.getElementById('bmlt_tools_address_string').innerHTML = final_string;
-			};
-
-	/***********************************************************************************************/
-	/************************************** RESPONSE DISPLAY ***************************************/
-	/***********************************************************************************************/
-			
-		/***************************************************************************************/
-		/**
-			\brief Perform the lookup.
-			
-			This takes the built-up address string, and sends it into the geocoder.
-			
-			It sets up an AJAX call that will be caught by the GeoCallback function.
-		*/
-		function GetGeoAddress (
-								address	///< This is either a string, or a GLatLng object. If the latter, this will be a reverse lookup.
-								)
-			{
-
-				if (typeof address == 'string' || address instanceof String) {
-					var f_address = address;
-				} else {
-					f_address = address.lat() + ',' + address.lng();
-				}
-				//console.log(f_address);
-				if ( geocoder )
-					{
-					ClearLookupResults ( );
-					geocode_response = null;
-					if ( g_show_debug_checkbox )
-						{
-						SetBlankDebugData ();
-						};
-					document.getElementById('bmlt_tools_placemark_count').innerHTML = '';
-					g_pm_index = 0;
-					g_pm_index_max = 0;
-					//geocoder.getLocations ( address, GeoCallback );
-
-						geocoder = new google.maps.Geocoder();
-						geocoder.geocode({address: f_address}, function(results, status) {
-
-							if (status == google.maps.GeocoderStatus.OK) {
-								//console.log(f_address);
-								GeoCallback(results[0]);
-							}
-						});
-					};
-			};
-		
-		/***************************************************************************************/
-		/**
-			\brief Clear the right hand (address lookup response) form.
-		*/
-		function ClearLookupResults ( )
-			{
-				document.getElementById('bmlt_tools_lookup_address_nation').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_state').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_county').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_town').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_borough').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_street').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_zip').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_long').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_lookup_address_lat').innerHTML = '&nbsp;';
-				document.getElementById('bmlt_tools_goo_go').style.display = 'none';
-				document.getElementById('bmlt_tools_accuracy_display').style.display = 'none';
-				document.getElementById('bmlt_tools_address_transfer_container').style.display = 'none';
-				document.getElementById('bmlt_tools_placemark_rotator_controls').style.display = 'none';
-				document.getElementById('bmlt_tools_goo_go_a').href = null;
-			};
-		
-		/***************************************************************************************/
-		/**
-			\brief This catches the AJAX response, and fills in the response form.
-		*/					
-		function GeoCallback (
-								in_geocode_response	///< The JSON object.
-							)
-			{
-				geocode_response = in_geocode_response;
-
-				if ( geocode_response )
-					{
-					// We get this early, so it will show up in the titles for the debug data links.
-					g_pm_index_max = geocode_response.address_components.length;
-					}
-				
-				if ( g_show_debug_checkbox )
-					{
-					document.getElementById('bmlt_tools_dump_pre').innerHTML = TraverseJSONTree ( );
-					};
-
-				if ( geocode_response )
-					{
-					// If we have ore than one placemark, we let the globals know, and start off with the first one.
-					if ( g_pm_index_max )	// Have to have at least one.
-						{
-						g_pm_index = 1;
-					
-						// This parses the placemark, and fills the form.
-						DisplayPlacemark ( );
-						}
-					else
-						{
-						g_pm_index = 0;
-						g_pm_index_max = 0;
-						if ( g_show_debug_checkbox )
-							{
-							SetBlankDebugData ();
-							};
-						geocode_response = null;
-						alert ( 'NOTHING FOUND' );				
-						};
-					}
-				else
-					{
-					g_pm_index = 0;
-					g_pm_index_max = 0;
-					if ( g_show_debug_checkbox )
-						{
-						SetBlankDebugData ();
-						};
-					geocode_response = null;
-					alert ( 'NO RESPONSE FROM GOOGLE' );				
-					};
-			};
-		
-		/***************************************************************************************/
-		/**
-			\brief Makes the Google Maps Lookup Link.
-			
-			This simply builds the URI for the "Gooogle Maps" link that is displayed in the lookup
-			results form. The lookup is done with the long/lat pair, returned in the response.
-		*/
-		function MakeGoogleLink()
-			{
-				var longitude = parseFloat ( document.getElementById('bmlt_tools_lookup_address_long').innerHTML );
-				var latitude = parseFloat ( document.getElementById('bmlt_tools_lookup_address_lat').innerHTML );
-				var uri = 'http://maps.google.com/maps?q='+latitude+','+longitude;
-				document.getElementById('bmlt_tools_goo_go').style.display = 'block';
-				document.getElementById('bmlt_tools_goo_go_a').href = encodeURI(uri);
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief Show the next placemark.
-			
-			If there are more than one placemark objects, this increments to the next one, and displays it.
-			If we are at the end, this does nothing.
-		*/
-		function IncrementPlaceMark()
-			{
-				if ( g_pm_index < g_pm_index_max )
-					{
-					g_pm_index++;
-					ClearLookupResults();
-					DisplayPlacemark ( );
-					}
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief Show the previous placemark.
-			
-			If there are more than one placemark objects, this decrements to the previous one, and displays it.
-			If we are at the beginning, this does nothing.
-		*/
-		function DecrementPlaceMark()
-			{
-				if ( g_pm_index > 1 )
-					{
-					g_pm_index--;
-					ClearLookupResults();
-					DisplayPlacemark ( );
-					}
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief Parse and display the currently selected placemark.
-			
-			This takes the currently selected placemark, and sets up the response form to reflect its data.
-			There's a lot of kludgery in this function. Rather than use a clever recursive-descent parser,
-			we use a brute-force approach, and look for preset configurations.
-		*/
-		function DisplayPlacemark ( )
-		{
-			if ( geocode_response && geocode_response.address_components.length )
-			{
-				// Yeah, this is an ugly, kludgy mess, but a full recursive-descent parser is WAY overkill for this. It's like writing a full-power TIFF reader. The fox usually ain't worth the chase.
-				let pm = geocode_response;
-
-				let i, j, types;
-				let address_component = {}
-				// Loop through the Geocoder result set. Note that the results
-				// array will change as this loop can self iterate.
-				for (i = 0; i < pm.address_components.length; i++) {
-					address_component = pm.address_components[i];
-					types = address_component.types;
-					for (j = 0; j < types.length; j++) {
-						if (types[j] === 'street_number') {
-							pm.address_components.streetNumber = address_component.long_name;
-						}
-						if (types[j] === 'route') {
-							pm.address_components.street = address_component.long_name;
-						}
-						if (types[j] === 'neighborhood') {
-							pm.address_components.neighborhood = address_component.long_name;
-						}
-						if (types[j] === 'locality') {
-							pm.address_components.city = address_component.long_name;
-						}
-						if (types[j] === 'administrative_area_level_1') {
-							pm.address_components.state = address_component.long_name;
-						}
-						if (types[j] === 'administrative_area_level_2') {
-							pm.address_components.county = address_component.long_name;
-						}
-						if (types[j] === 'country') {
-							pm.address_components.country = address_component.long_name;
-						}
-						if (types[j] === 'postal_code') {
-							pm.address_components.zip = address_component.long_name;
-						}
-						if (types[j] === 'postal_code_suffix') {
-							pm.address_components.zip += "-" + address_component.long_name;
-						}
-						if (types[j] === 'sublocality_level_1') {
-							pm.address_components.borough = address_component.long_name;
-						}
-
-						break;
-					}
-				}
-
-				document.getElementById('bmlt_tools_address_transfer_container').style.display = 'block';
-
-				if ( pm.geometry.location )
-				{
-					document.getElementById('bmlt_tools_lookup_address_long').innerHTML = trim_str ( pm.geometry.location.lng().toString() );
-					document.getElementById('bmlt_tools_lookup_address_lat').innerHTML = trim_str ( pm.geometry.location.lat().toString() );
-					MakeGoogleLink();
-					if ( g_show_long_lat_info && g_show_map_checkbox )
-					{
-						SetMapResponseMarker();
-					};
-				};
-
-				if ( pm.address_components.country )
-				{
-					var nation = trim_str ( pm.address_components.country.toString() );
-					document.getElementById('bmlt_tools_lookup_address_nation').innerHTML = nation;
-				};
-
-				if ( pm.address_components.state )
-				{
-					var state = trim_str ( pm.address_components.state.toString() );
-					document.getElementById('bmlt_tools_lookup_address_state').innerHTML = state;
-				};
-
-				if ( pm.address_components.county )
-				{
-					var county = trim_str ( pm.address_components.county.toString() );
-					document.getElementById('bmlt_tools_lookup_address_county').innerHTML = county;
-
-					if ( pm.address_components.city )
-					{
-						var town = trim_str ( pm.address_components.city.toString() );
-						document.getElementById('bmlt_tools_lookup_address_town').innerHTML = town;
-
-						if ( pm.address_components.borough )
-						{
-							var borough = trim_str ( pm.address_components.borough.toString() );
-							document.getElementById('bmlt_tools_lookup_address_borough').innerHTML = borough;
-
-							if ( pm.address_components.street )
-							{
-								var street = trim_str ( pm.address_components.street.toString() );
-								var streetNumber = trim_str ( pm.address_components.streetNumber.toString() );
-								document.getElementById('bmlt_tools_lookup_address_street').innerHTML = streetNumber + " " + street;
-							};
-
-							if ( pm.address_components.zip )
-							{
-								var zip = trim_str ( pm.address_components.zip.toString() );
-								document.getElementById('bmlt_tools_lookup_address_zip').innerHTML = zip;
-							};
-						}
-						else
-						{
-							if ( pm.address_components.street )
-							{
-								var street = trim_str ( pm.address_components.street.toString() );
-								var streetNumber = trim_str ( pm.address_components.streetNumber.toString() );
-								document.getElementById('bmlt_tools_lookup_address_street').innerHTML = streetNumber + " " + street;
-							};
-							if ( pm.address_components.zip )
-							{
-								var zip = trim_str ( pm.address_components.zip.toString() );
-								document.getElementById('bmlt_tools_lookup_address_zip').innerHTML = zip;
-							};
-						};
-					};
-				}
-				/* else
-				{
-					if ( pm.address_components )
-					{
-						//var town = trim_str ( pm.address_components.city.toString() );
-						document.getElementById('bmlt_tools_lookup_address_town').innerHTML = town;
-
-						if ( pm.AddressDetails.Country.AdministrativeArea.Locality.DependentLocality )
-						{
-							var borough = trim_str ( pm.AddressDetails.Country.AdministrativeArea.Locality.DependentLocality.DependentLocalityName.toString() );
-							document.getElementById('bmlt_tools_lookup_address_borough').innerHTML = borough;
-							if ( pm.AddressDetails.Country.AdministrativeArea.Locality.DependentLocality.Thoroughfare )
-							{
-								var street = trim_str ( pm.AddressDetails.Country.AdministrativeArea.Locality.DependentLocality.Thoroughfare.ThoroughfareName.toString() );
-								document.getElementById('bmlt_tools_lookup_address_street').innerHTML = street;
-							};
-							if ( pm.AddressDetails.Country.AdministrativeArea.Locality.DependentLocality.PostalCode )
-							{
-								var zip = trim_str ( pm.AddressDetails.Country.AdministrativeArea.Locality.DependentLocality.PostalCode.PostalCodeNumber.toString() );
-								document.getElementById('bmlt_tools_lookup_address_zip').innerHTML = zip;
-							};
-						}
-						else
-						{
-							if ( pm.AddressDetails.Country.AdministrativeArea.Locality.Thoroughfare )
-							{
-								var street = trim_str ( pm.AddressDetails.Country.AdministrativeArea.Locality.Thoroughfare.ThoroughfareName.toString() );
-								document.getElementById('bmlt_tools_lookup_address_street').innerHTML = street;
-							};
-							if ( pm.AddressDetails.Country.AdministrativeArea.Locality.PostalCode )
-							{
-								var zip = trim_str ( pm.AddressDetails.Country.AdministrativeArea.Locality.PostalCode.PostalCodeNumber.toString() );
-								document.getElementById('bmlt_tools_lookup_address_zip').innerHTML = zip;
-							};
-						};
-					};
-				};*/
-			}
-			else
-			{
-				alert ( 'ERROR: This placemark cannot be displayed!' );
-			};
-		};
-			
-		/***************************************************************************************/
-		/**
-			\brief Look up the address as a geocode.
-		*/
-		function GeocodeAddress()
-			{
-				GetGeoAddress ( trim_str ( document.getElementById('bmlt_tools_address_string').innerHTML ) );
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief Look up the address as a reverse geocode (Uses the long/lat fields).
-		*/
-		function ReverseLookup()
-			{
-				// Even though 0,0 is actually a valid long/lat, it's in the ocean, so we probably won't find an address there.
-				if ( document.getElementById('bmlt_tools_address_lat').value || document.getElementById('bmlt_tools_address_long').value )
-					{
-					GetGeoAddress ( new google.maps.LatLng ( parseFloat ( document.getElementById('bmlt_tools_address_lat').value ), parseFloat ( document.getElementById('bmlt_tools_address_long').value ) ) );
-					}
-				else
-					{
-					alert ( 'ERROR: You need to enter a longitude and latitude!' );
-					}
-			};
-			
-		/***************************************************************************************/
-		/**
-			\brief Transfer a value from the response (left) to the input (right), replacing the input.
-		*/
-		function TransferValue (
-								in_from,	///< The DOM ID of the element that provides the value (will use innerHTML)
-								in_to		///< The DOM ID of the input element that will receive the data (will use value)
-								)
-			{
-				if ( document.getElementById(in_to) && document.getElementById(in_from) )
-					{
-					var str_val = trim_str ( document.getElementById(in_from).innerHTML );
-					if ( str_val && str_val != '&nbsp;' )
-						{
-						document.getElementById(in_to).value = str_val;
-						}
-					else
-						{
-						document.getElementById(in_to).value = '';
-						};
-					
-					UpdateAddressString();
-					document.getElementById(in_to).focus();
-					};
-			};
-/*##END_JAVASCRIPT_ALL##*/	
-/*##START_JAVASCRIPT_MAP##*/	
-	/***********************************************************************************************/
-	/***************************************** MAP DISPLAY *****************************************/
-	/***********************************************************************************************/
-
-		if ( g_show_long_lat_info && g_show_map_checkbox )
-			{
-			/**
-				MAP SETTINGS
-				
-				We can provide an interactive map that will contain up to two markers. One will be for the entry, and the other for the response.
-				
-				If the user sets a marker in the map by moving it or clicking, the entry marker is set, and the entry long/lat fields are updated.
-				The response marker cannot be moved by the user. It is set in response to the Google Maps geocode response.
-			*/
-			var	g_map = null;				///< The GMap2 Object (Only used if g_show_map_checkbox is true)
-			var	g_marker_set = null;		///< The Marker in the Map Object (Only used if g_show_map_checkbox is true). This marker is for the entry.
-			var	g_marker_response = null;	///< The Marker in the Map Object (Only used if g_show_map_checkbox is true). This marker is for the response.
-			var g_map_center = new google.maps.LatLng ( 37, -96 );	///< The center of the map.
-			var g_map_zoom = 4;				///< The current map zoom.
-
-				/// These are the two icons we use to denote the positions of the map coordinates.
-				var image1 = 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png';
-
-				/// The yellow icon represents the entry form, and can be dragged.
-				//var g_yellowIcon = new google.maps.Marker(image1);
-				var g_yellowIcon = "https://maps.google.com/intl/en_us/mapfiles/marker_yellow.png";
-
-				/// The grey icon represents the geocode response, and cannot be dragged.
-				//var g_greyIcon = new google.maps.Marker(image1);
-				var g_greyIcon = "https://maps.google.com/intl/en_us/mapfiles/marker_grey.png";
-										
-			/***************************************************************************************/
-			/**
-				\brief Map Checkbox Changed.
-			*/
-			function ToggleMapMode ( )
-				{
-					document.getElementById('bmlt_tools_map_div').style.display = (document.getElementById('bmlt_tools_map_div').style.display == 'none') ? 'block' : 'none';
-	
-					if ( document.getElementById('bmlt_tools_map_div').style.display == 'block' )
-						{
-						SetUpMap();
-						}
-	
-					RestoreFocus();
-				};
-	
-			/***************************************************************************************/
-			/**
-				\brief Sets up the map.
-			*/
-			function SetUpMap (
-								in_map_center	///< A GLatLng. The center for the map to be displayed.
-								)
-				{
-					if ( g_show_long_lat_info && g_show_map_checkbox && (document.getElementById('bmlt_tools_map_div').style.display == 'block') )
-						{
-						if ( !g_map )
-							{
-								var longitude = parseFloat ( document.getElementById('bmlt_tools_lookup_address_long').innerHTML );
-								var latitude = parseFloat ( document.getElementById('bmlt_tools_lookup_address_lat').innerHTML );
-
-								g_map = new google.maps.Map(document.getElementById('bmlt_tools_map_div'), {
-									center: {lat: latitude, lng: longitude},
-									zoom: 15,
-									draggableCursor: 'crosshair'
-								});
-
-
-							if ( g_map )
-								{
-								// g_map.addControl(new GLargeMapControl());	// Zoom/Pan controls
-								//g_map.addControl(new GScaleControl());		// Display the scale
-								//g_map.addControl(new GMapTypeControl());	// Allow user to select different map types.
-								//g_map.addMapType ( G_PHYSICAL_MAP );		// Terrain/Earth
-								//g_map.enableScrollWheelZoom();				// Allow scroll wheel zooming.
-								//g_map.enableContinuousZoom();				// Allow smooth zooms.
-								// We use the event handler to track the map state.
-									google.maps.event.addListener( g_map, "dragend", MoveEnd );
-									google.maps.event.addListener( g_map, "click", MapClicked );
-									//marker.addListener('dragend', MapClicked);
-								};
-							};
-	
-						if ( g_map )
-							{
-							zoom = g_map_zoom;
-							if ( in_map_center )
-								{
-								g_map_center = in_map_center;
-								};
-							
-							g_map.setCenter(g_map_center, g_map_zoom);
-							
-							SetMapResponseMarker();
-							SetMapEntryMarker();
-							};
-						};
-				};
-				
-			/***************************************************************************************/
-			/**
-				\brief Set the map marker that tracks the entry. If the fields are clear, then the marker is removed.
-			*/
-			function SetMapEntryMarker ( )
-				{
-					// First, get rid of the old one (if there is one).
-					if ( g_marker_set )
-						{
-						if ( g_map )
-							{
-							g_marker_set.setMap(null)
-							};
-						
-						g_marker_set = null;
-						};
-				
-					if ( g_map )
-						{
-						var longitude = parseFloat ( document.getElementById('bmlt_tools_address_long').value );
-						var latitude = parseFloat ( document.getElementById('bmlt_tools_address_lat').value );
-						
-						if ( longitude || latitude )
-							{
-							var point = new google.maps.LatLng ( latitude, longitude );
-							// This marker is draggable.
-							g_marker_set = new google.maps.Marker({
-								map:g_map,
-								position: point,
-								draggable: true,
-								title: "Drag to set the longitude and latitude to a New Location.",
-								icon: g_yellowIcon
-							});
-
-							//google.maps.addListener( g_marker_set, "dragend", DragEndEntry );
-
-								g_marker_set.addListener('dragend', MapClicked);
-							g_marker_set.setMap(g_map);
-							g_map.panTo ( point );
-								g_marker_set.setPosition(point);
-
-
-							};
-						};
-				};
-				
-			/***************************************************************************************/
-			/**
-				\brief Set the map marker that tracks the response.
-			*/
-			function SetMapResponseMarker ( )
-				{
-					// First, get rid of the old one (if there is one).
-					if ( g_marker_response )
-						{
-						if ( g_map )
-							{
-								g_marker_response.setMap ( null );
-							};
-						
-						g_marker_response = null;
-						};
-				
-					if ( g_map )
-						{
-						var longitude = parseFloat ( document.getElementById('bmlt_tools_lookup_address_long').innerHTML );
-						var latitude = parseFloat ( document.getElementById('bmlt_tools_lookup_address_lat').innerHTML );
-						
-						if ( longitude || latitude )
-							{
-							var point = new google.maps.LatLng ( latitude, longitude );
-							g_marker_response = new google.maps.Marker({
-								map: g_map,
-								position: point,
-								clickable: false,
-								draggable: false,
-								title: "This is the location of the current placemark.",
-								icon: g_greyIcon
-							});
-								g_marker_response.setMap ( g_map );
-							g_map.panTo ( point );
-							};
-						};
-				};
-				
-			/***************************************************************************************/
-			/**
-				\brief Records the entry marker's new position, and set up the text entry boxes.
-			*/
-			function DragEndEntry (
-									in_point	///< The point at which the drag stopped.
-									)
-				{
-
-					// We round the lat/long to 10 places.
-					document.getElementById('bmlt_tools_address_long').value = (Math.round(in_point.latLng.lng()*10000000000)/10000000000).toString();
-					document.getElementById('bmlt_tools_address_lat').value = (Math.round(in_point.latLng.lat()*10000000000)/10000000000).toString();
-					document.getElementById('bmlt_tools_address_lat').focus();
-					SetMapEntryMarker();
-				};
-				
-			/***************************************************************************************/
-			/**
-				\brief Records the entry marker's new position, and set up the text entry boxes.
-			*/
-			function MapClicked (
-									in_overlay,			///< If the click was in an overlay, the overlay object.
-									in_point,			///< The point in the map at which the click occurred.
-									in_overlay_point	///< The location of the overlay in which the click occurred.
-									)
-				{
-					//console.log(in_overlay);
-					//console.log(in_point);
-					//console.log(in_overlay_point);
-
-					DragEndEntry ( in_overlay );
-				};
-				
-			/***************************************************************************************/
-			/**
-				\brief Records the map's new position and zoom after all map events.
-			*/
-			function MoveEnd ( )
-				{
-					if ( g_map )
-						{
-							google.maps.event.addListener(g_map, "zoom_changed", function() { g_map_zoom = g_map.getZoom(); });
-							g_map_center = null;
-							google.maps.event.addListener(g_map, "center_changed", function() { g_map_center = g_map.getCenter(); });
-						};
-				};
-			};
-/*##END_JAVASCRIPT_MAP##*/	
-/*##START_JAVASCRIPT_DEBUG##*/	
-	/***********************************************************************************************/
-	/**************************************** DEBUG DISPLAY ****************************************/
-	/***********************************************************************************************/
-
-		if ( g_show_debug_checkbox )
-			{
-			/***************************************************************************************/
-			/**
-				\brief Debug Info Checkbox Changed.
-			*/
-			function ToggleDebugMode ( )
-				{
-					document.getElementById('bmlt_tools_dump_pre').style.display = (document.getElementById('bmlt_tools_dump_pre').style.display == 'none') ? 'block' : 'none';
-					
-					RestoreFocus();
-				};
-			
-			/***************************************************************************************/
-			/**
-				\brief Create a debug display of the JSON return (This is only used when the debug is shown).
-				
-				This "walks the JSON tree" of the Geocoder response, and builds a string to be displayed.
-				
-				\returns a string, the contents and hierarchy of the JSON object
-			*/
-			function TraverseJSONTree( )
-				{
-					var json_string = '';	///< This is the string that will be returned. It's built upon by the function below.
-					var indent = 0;			///< This controls the displayed indent, so we can see the hierarchy.
-					
-					/***************************************************************************************/
-					/**
-						\brief This is a recursive function that either recurses, or builds the return string.
-						
-						\returns the current state of the string being built.
-					*/
-					function js_traverse( in_object )
-						{
-						var tabs = '';
-						var type = typeof in_object;
-						if (type == "object")	// If it's an object, we'll be recursing into it.
-							{
-							indent++;
-							for ( var c = 1; c < indent; c++ )	// This is how many levels "deep" we are.
-								{
-								tabs += "&middot;&middot; ";	// We indent, and mark it with two dots and a space.
-								};
-							for (var key in in_object)
-								{
-								var a_rec_str = '';
-								var a_rec = false;		// This will be used to hold links to the placemark.
-								if ( (json_string && (indent < 2)) || ((indent == 2) && key.match ( /[0-9]+/ )) )
-									{
-									json_string += "\n";
-									};
-								
-								if ( json_string )
-									{
-									json_string += "\n";
-									if ( ((indent == 2) && key.match ( /[0-9]+/ )) && (g_pm_index_max > 1) )
-										{
-										a_rec = true;
-										a_rec_str = ''; //<a href="javascript:g_pm_index='+(parseInt(key) + 1).toString()+';DisplayPlacemark()" title="Go to Placemark '+(parseInt(key) + 1).toString()+' of '+ g_pm_index_max.toString() +'">
-										};
-									};
-								json_string += (a_rec ? a_rec_str :'' ) + tabs + trim_str ( key.toString() ) + ":" + (a_rec ? '' :'' ) + " ";
-
-								js_traverse(in_object[key]);
-								};
-							indent--;
-							}
-						else
-							{
-							json_string += trim_str ( in_object.toString() );	// If it's just a "leaf" value, then we display that.
-							};
-							
-						return json_string;
-						};
-					
-					return js_traverse ( geocode_response );
-				};
-				
-			/***************************************************************************************/
-			/**
-				\brief Puts the "NO DATA" into the debug area.
-			*/
-			function SetBlankDebugData ()
-				{
-				document.getElementById('bmlt_tools_dump_pre').innerHTML = '<span class="no_data_span">NO DATA</span>';
-				};
-			};
-
-/*##END_JAVASCRIPT_DEBUG##*/	
-		// ]]>
-		</script>
-		<style type="text/css">
-		/* <![CDATA[ */
-/*##START_CSS##*/		
-	/*########################################################################################################################*/
-	/*###################################################### CSS CLASSES #####################################################*/
-	/*########################################################################################################################*/
-
-			/* These are 3 "universal" styles that I tend to use in all my work. They "Clean the blackboard," so to speak. */
-			* { margin: 0; padding: 0; }	/* This kills all margins and padding. You will need to re-introduce them for some elements. */
-			
-			body, html { width: 100%; height: 100%; }	/* This ensures that you can have "whole window" elements. */
-			
-			body { font-family: Helvetica,Arial,San-Serif; font-size:small; }	/* Set the basic fonts. */
-			
-			/* I like my links to be a bit "livelier" than most, but, for usability, I stick with the blue/red underline theme. */
-			a,
-			a:visited
-				{
-				color: #33c;
-				text-decoration: underline;
-				}
-			
-			a:hover,
-			a:active
-				{
-				color: #c33;
-				text-decoration: none;
-				}
-			
-			/* These classes ensure that a floated block element is properly sized. */
-			.clear_both,
-			#bmlt_tools_address_submit_line .clear_both
-				{
-				clear:both;
-				}
-			
-			/* This is the main container that surrounds the two forms. */
-			#bmlt_tools_main_container
-				{
-				width: 818px;
-				position:absolute;
-				top: 20px;
-				left: 50%;
-				margin-left:-409px;
-				padding: 8px;
-				background-color: #555;
-				}
-			
-			/* This is the left-hand (data entry) container. */
-			#bmlt_tools_main_container #bmlt_tools_address_source_container
-				{
-				width: 390px;
-				background-color: #ff9;
-				}
-			
-			/* This is the right-hand (geocode result) container. */
-			#bmlt_tools_main_container #bmlt_tools_address_lookup_container
-				{
-				width: 400px;
-				background-color: #ccc;
-				float:right;
-				height: 360px;
-				}
-			
-			/* This is the title at the top of each container. */
-			#bmlt_tools_main_container #bmlt_tools_address_source_container h1,
-			#bmlt_tools_main_container #bmlt_tools_address_lookup_container h1
-				{
-				font-size: medium;
-				font-weight: bold;
-				background-color: #333;
-				color:white;
-				margin-left: 4px;
-				margin-right:4px;
-				text-align: center;
-				height: 30px;
-				line-height: 30px;
-				}
-			
-			/* They each have 4 pixels of padding at the top. */
-			#bmlt_tools_main_container #bmlt_tools_address_lookup_container,
-			#bmlt_tools_main_container #bmlt_tools_address_source_container
-				{
-				padding-top:4px;
-				}
-			
-			/* Since the background for the transfer link column is dark, we use a lighter link for these. */
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	a,
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	a:visited
-				{
-				color: #ccf;
-				}
-			
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	a:hover,
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	a:active
-				{
-				color: #f96;
-				}
-			
-			/* This is the "transfer all" link at the top of the links column. */
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container .one_line_form_all
-				{
-				margin-top:4px;
-				height: 30px;
-				line-height: 30px;
-				background-color:white;
-				}
-			
-			/* Its link is a different color from the rest of them. */
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	.one_line_form_all a,
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	.one_line_form_all a:visited
-				{
-				color: #33c;
-				}
-			
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	.one_line_form_all a:hover,
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container	.one_line_form_all a:active
-				{
-				color: #c33;
-				}
-
-			/* All three containers float against each other. */
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container,
-			#bmlt_tools_main_container #bmlt_tools_address_source_container
-				{
-				float:left;
-				}
-			
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container
-				{
-				margin-left:2px;
-				}
-			
-			/* The arrow links are heavy. */
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container,
-			#bmlt_tools_main_container #bmlt_tools_placemark_count_decrement,
-			#bmlt_tools_main_container #bmlt_tools_placemark_count_increment
-				{
-				font-weight:bold;
-				}
-			
-			/* This is the div that contains the multiple results navigation. */
-			#bmlt_tools_main_container #bmlt_tools_placemark_rotator_controls
-				{
-				height: 40px;
-				line-height: 40px;
-				}
-			
-			/* These three classes describe the layout of the multiple results navigation. */
-			
-			/* The "decrement" link floats to the left. */
-			#bmlt_tools_main_container #bmlt_tools_placemark_count_decrement
-				{
-				float:left;
-				padding-left: 20px;
-				}
-			
-			/* The text item is centered between the two arrows. */
-			#bmlt_tools_main_container #bmlt_tools_placemark_count
-				{
-				text-align:center;
-				}
-				
-			/* The "increment" link floats to the right. */
-			#bmlt_tools_main_container #bmlt_tools_placemark_count_increment
-				{
-				float:right;
-				padding-right: 20px;
-				}
-			
-			/* Each of the links inside the column of links. */
-			#bmlt_tools_main_container #bmlt_tools_address_transfer_container div
-				{
-				margin-left:0;
-				width:24px;
-				clear:both;
-				text-align:center;
-				white-space:nowrap;
-				}
-			
-			/* In all three areas, we have lines that contain text items. We want them to line up with each other, so we use the same class for them all. */
-			#bmlt_tools_main_container .one_line_form
-				{
-				clear:both;
-				float:none;
-				margin-top: 2px;
-				margin-bottom: 2px;
-				text-align:left;
-				line-height:20px;
-				vertical-align:middle;
-				height:20px;
-				}
-			
-			/* The right and left forms use labels on the left. */
-			#bmlt_tools_main_container .one_line_form label,
-			#bmlt_tools_main_container .one_line_form .label
-				{
-				font-weight: bold;
-				display: block;
-				float:left;
-				width: 120px;
-				text-align: right;
-				}
-			
-			/* These are the text items in the left form. */
-			#bmlt_tools_main_container .one_line_form input
-				{
-				width: 246px;
-				margin-left:4px;
-				float:left;
-				}
-			
-			/* These are for the text divs in the right form. */
-			#bmlt_tools_main_container .one_line_form div
-				{
-				float:left;
-				margin-left:4px;
-				margin-right:4px;
-				}
-			
-			/* The longitude/latitude are on one line. Their sizes are different. */
-			#bmlt_tools_main_container #bmlt_tools_address_long_lat label,
-			#bmlt_tools_main_container #bmlt_tools_lookup_long_lat_line label,
-			#bmlt_tools_main_container #bmlt_tools_lookup_long_lat_line .label
-			
-				{
-				float:left;
-				display: block;
-				padding-left: 4px;
-				width: 75px;
-				font-weight: bold;
-				text-align: right;
-				}
-			
-			/* These are the text items for each. */
-			#bmlt_tools_main_container #bmlt_tools_address_long_lat input,
-			#bmlt_tools_main_container #bmlt_tools_lookup_long_lat_line div
-				{
-				float:left;
-				width: 100px;
-				margin-left:4px;
-				}
-			
-			/* This is the "live" address string item in the left form that reflects the current input. */
-			#bmlt_tools_main_container #bmlt_tools_address_string
-				{
-				height:60px;
-				line-height:20px;
-				width: 242px;
-				}
-			
-			/* This is the div that contains the two buttons in the left-hand form. */
-			#bmlt_tools_main_container #bmlt_tools_address_submit_line,
-			#bmlt_tools_main_container #bmlt_tools_address_reverse_submit_line
-				{
-				clear:both;
-				float: none;
-				text-align:center;
-				padding-bottom:4px;
-				height: 30px;
-				line-height: 30px;
-				}
-			
-			/* These are the two buttons. */
-			#bmlt_tools_main_container #bmlt_tools_address_submit_line input,
-			#bmlt_tools_main_container #bmlt_tools_address_reverse_submit_line input
-				{
-				float: none;
-				width:120px;
-				margin-left:auto;
-				margin-right:auto;
-				}
-			
-			/* This is the Google Maps link in the right-hand form. */
-			#bmlt_tools_main_container #bmlt_tools_goo_go
-				{
-				text-align:center;
-				font-weight:bold;
-				font-size:medium;
-				}
-			
-			/* This is the debug pre element. */
-			#bmlt_tools_main_container #bmlt_tools_dump_pre
-				{
-				clear:both;
-				margin-top: 4px;
-				padding: 4px;
-				background-color: white;
-				}
-			
-			/* This is the map display element. */
-			#bmlt_tools_main_container #bmlt_tools_map_div
-				{
-				clear:both;
-				margin: 4px;
-				height: 802px;
-				}
-			
-			/* Debug/Map Checkbox is small. */
-			#bmlt_tools_main_container #bmlt_tools_map_checkbox,
-			#bmlt_tools_main_container #bmlt_tools_debug_checkbox
-				{
-				width: 20px;
-				height: 30px;
-				text-align: center;
-				}
-				
-			/* The Debug/Map check label is an inline element with no float or predetermined size. */
-			#bmlt_tools_main_container #bmlt_tools_map_check_label,
-			#bmlt_tools_main_container #bmlt_tools_debug_check_label
-				{
-				color: white;
-				display: inline;
-				text-align: left;
-				width: auto;
-				height: 30px;
-				line-height: 33px;
-				vertical-align: middle;
-				}
-			
-			#bmlt_tools_main_container .padding_div
-				{
-				height: 60px;
-				}
-			
-			#bmlt_tools_main_container .padding_div_2
-				{
-				padding-top: 34px;
-				}
-			
-			#bmlt_tools_main_container #bmlt_tools_padding_div_scale
-				{
-				text-align:center;
-				}
-			
-			#bmlt_tools_main_container #bmlt_tools_accuracy_label
-				{
-				height: 20px;
-				line-height: 20px;
-				font-weight: bold;
-				margin-left:20px;
-				}
-				
-			/* This is the gradient that displays the accuracy of the geolocator response */
-			#bmlt_tools_main_container .bmlt_tools_accuracy_gradient
-				{
-				float:left;
-				width: 300px;
-				height: 10px;
-				border:1px solid black;
-				margin-top: 5px;
-				margin-bottom: 25px;
-				margin-left: auto;
-				margin-right: auto;
-				background-color:#ffc;
-				padding-left:2px;
-				}
-				
-			#bmlt_tools_main_container .bmlt_tools_acc_min,
-			#bmlt_tools_main_container .bmlt_tools_acc_max
-				{
-				float:left;
-				width: 47px;
-				height: 20px;
-				line-height: 20px;
-				font-size: 9px;
-				vertical-align:middle;
-				}
-			
-			/* This is the big "NO DATA" in an empty debug area. */
-			#bmlt_tools_main_container .no_data_span
-				{
-				font-weight: bold;
-				font-size: large;
-				font-style: italic;
-				color: #777;
-				}
-			
-			/* This is the accuracy indicator that moves around the bar. */
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale
-				{
-				width:4px;
-				height:12px;
-				border-color: #555;
-				border-style:solid;
-				border-top-width: 2px;
-				border-bottom-width: 2px;
-				border-left-width: 1px;
-				border-right-width: 1px;
-				position: relative;
-				top: -3px;
-				}
-			
-			/* Each line in the gradient is one pixel wide. */
-			#bmlt_tools_main_container #bmlt_tools_accuracy_gradient .line
-				{
-				width:2px;
-				height:5px;
-				margin-top:5px;
-				float:left;
-				border-left:1px solid #555;
-				}
-			
-			/* The scale can be hidden. */
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.accDisabled
-				{
-				display:none;
-				}
-			
-			/* We use CSS to set the position. There are 10 possible values. */
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc0
-				{
-				left: 0px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc1
-				{
-				left: 33px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc2
-				{
-				left: 66px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc3
-				{
-				left: 99px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc4
-				{
-				left: 132px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc5
-				{
-				left: 165px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc6
-				{
-				left: 198px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc7
-				{
-				left: 231px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc8
-				{
-				left: 264px;
-				}
-			
-			#bmlt_tools_main_container div#bmlt_tools_accuracy_scale.acc9
-				{
-				left: 297px;
-				}
-				
-			#bmlt_tools_main_container #bmlt_tools_where_am_i
-				{
-				width: 50%;
-				text-align:center;
-				float:left;
-				};
-/*##END_CSS##*/		
-		/* ]]> */
-		</style>
-	</head>
-	<!--
-	/*########################################################################################################################*/
-	/*######################################################### HTML #########################################################*/
-	/*########################################################################################################################*/
-	-->
-	<!-- Make sure the body sets the focus on the first text element on load, and wipes the Google data on unload. -->
-	<body onload="GeocodeInitializeOnLoad()">
-<!--##START_HTML##-->	
-		<!-- This container holds the entire workshop. -->
-		<div id="bmlt_tools_main_container">
-			<!-- This tool requires JavaScript. If you don't have JavaScript enabled, it won't work. -->
-			<noscript><h1 style="text-align:center;color:red">THIS WILL NOT WORK, BECAUSE YOU DO NOT HAVE JAVASCRIPT ENABLED.</h1></noscript>
-			<!-- This is the left-hand address entry form. -->
-			<div id="bmlt_tools_address_source_container" style="display:none">
-				<h1>Enter Address</h1>
-				<form action="#" method="get" id="bmlt_tools_address_source_form" onsubmit="FormSubmitted();return false">
-					<div id="bmlt_tools_form_contents">
-						<div class="one_line_form" id="bmlt_tools_address_string_line">
-							<div class="label">Address:</div>
-							<div id="bmlt_tools_address_string"></div>
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_street">Street Address:</label>
-							<input type="text" id="bmlt_tools_address_street" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_other">Other Address:</label>
-							<input type="text" id="bmlt_tools_address_other" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_borough">Borough/Ku:</label>
-							<input type="text" id="bmlt_tools_address_borough" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_town">Town:</label>
-							<input type="text" id="bmlt_tools_address_town" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_county">County/Shire:</label>
-							<input type="text" id="bmlt_tools_address_county" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_state">State/Province:</label>
-							<input type="text" id="bmlt_tools_address_state" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_zip">Zip/Postal Code:</label>
-							<input type="text" id="bmlt_tools_address_zip" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form">
-							<label for="bmlt_tools_address_nation">Nation:</label>
-							<input type="text" id="bmlt_tools_address_nation" value="" onchange="UpdateAddressString()" onkeyup="UpdateAddressString()" onfocus="g_focused_element=this" />
-							<div class="clear_both"></div>
-						</div>
-						<div class="one_line_form" id="bmlt_tools_address_submit_line"><input type="button" id="bmlt_tools_address_submit" value="Address Lookup" title="Find address information for this data." onclick="GeocodeAddress()" /></div>
-						<div id="bmlt_tools_address_long_lat" style="display:none">
-							<label for="bmlt_tools_address_long">Longitude:</label>
-							<input type="text" id="bmlt_tools_address_long" value="" onchange="if(g_show_map_checkbox)SetMapEntryMarker()" onkeyup="if(g_show_map_checkbox)SetMapEntryMarker()" onfocus="g_focused_element=this" />
-							<label for="bmlt_tools_address_lat">Latitude:</label>
-							<input type="text" id="bmlt_tools_address_lat" value="" onchange="if(g_show_map_checkbox)SetMapEntryMarker()" onkeyup="if(g_show_map_checkbox)SetMapEntryMarker()" onfocus="g_focused_element=this" />
-							<div id="bmlt_tools_address_reverse_submit_line"><div id="bmlt_tools_where_am_i" style="display:none"><input type="button" value="Where Am I?" onclick="WhereAmI()" title="Set the Longitude and Latitude to Your Current Location" /></div><input type="button" id="bmlt_tools_address_reverse_submit" value="Long/Lat Lookup" onclick="ReverseLookup()" title="Do a reverse lookup (find the address) for this longitude and latitude." /></div>
-						</div>
-						<div class="clear_both"></div>
-					</div>
-				</form>
-				<div class="clear_both"></div>
-			</div>
-			<!-- This is the center link div. -->
-			<div id="bmlt_tools_address_transfer_container" style="display:none">
-				<div class="one_line_form_all">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_street', 'bmlt_tools_address_street');TransferValue('bmlt_tools_lookup_address_borough', 'bmlt_tools_address_borough');TransferValue('bmlt_tools_lookup_address_town', 'bmlt_tools_address_town');TransferValue('bmlt_tools_lookup_address_county', 'bmlt_tools_address_county');TransferValue('bmlt_tools_lookup_address_state', 'bmlt_tools_address_state');TransferValue('bmlt_tools_lookup_address_zip', 'bmlt_tools_address_zip');TransferValue('bmlt_tools_lookup_address_nation', 'bmlt_tools_address_nation');TransferValue('bmlt_tools_lookup_address_long', 'bmlt_tools_address_long');TransferValue('bmlt_tools_lookup_address_lat', 'bmlt_tools_address_lat');if(g_show_map_checkbox)SetMapEntryMarker()" title="Transfer all of these values to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="padding_div"></div>
-				<div class="one_line_form">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_street', 'bmlt_tools_address_street')" title="Transfer the Street Address to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form">
-					<div style="display:none"><a href="javascript:TransferValue('bmlt_tools_lookup_address_other', 'bmlt_tools_address_other')">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_borough', 'bmlt_tools_address_borough')" title="Transfer the Borough to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_town', 'bmlt_tools_address_town')" title="Transfer the Town/City to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_county', 'bmlt_tools_address_county')" title="Transfer the County/Shire to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_state', 'bmlt_tools_address_state')" title="Transfer the State/Province to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_zip', 'bmlt_tools_address_zip')" title="Transfer the Zip/Postal Code to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form">
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_nation', 'bmlt_tools_address_nation')" title="Transfer the Nation to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-				<div class="one_line_form" id="bmlt_tools_transfer_long_lat" style="display:none">
-					<div class="padding_div_2"></div>
-					<div><a href="javascript:TransferValue('bmlt_tools_lookup_address_long', 'bmlt_tools_address_long');TransferValue('bmlt_tools_lookup_address_lat', 'bmlt_tools_address_lat');if(g_show_map_checkbox)SetMapEntryMarker()" title="Transfer the Longitude and Latitude to the Entry fields.">&lt;&lt;</a></div>
-				</div>
-			</div>
-			<!-- This is the right-hand lookup results form. -->
-			<div id="bmlt_tools_address_lookup_container" style="display:none">
-				<h1>Lookup Result</h1>
-				<div id="bmlt_tools_lookup_contents">
-					<div id="bmlt_tools_accuracy_display" style="display: none">
-						<div id="bmlt_tools_accuracy_label">Accuracy:</div>
-						<div id="bmlt_tools_padding_div_scale">
-							<div id="bmlt_tools_acc_min" class="bmlt_tools_acc_min">Less</div>
-							<div id="bmlt_tools_accuracy_gradient" class="bmlt_tools_accuracy_gradient"></div>
-							<div id="bmlt_tools_acc_max" class="bmlt_tools_acc_max">More</div>
-						</div>
-					</div><div style="padding-bottom: 60px;"></div>
-						<div class="one_line_form">
-							<div class="label">Street Address:</div>
-							<div id="bmlt_tools_lookup_address_street">&nbsp;</div>
-							<div class="clear_both"></div>
-						</div><div style="padding-bottom: 20px;"></div>
-					<div class="one_line_form">
-						<div class="label">Borough/Ku:</div>
-						<div id="bmlt_tools_lookup_address_borough">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-					<div class="one_line_form">
-						<div class="label">Town:</div>
-						<div id="bmlt_tools_lookup_address_town">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-					<div class="one_line_form">
-						<div class="label">County/Shire:</div>
-						<div id="bmlt_tools_lookup_address_county">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-					<div class="one_line_form">
-						<div class="label">State/Province:</div>
-						<div id="bmlt_tools_lookup_address_state">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-					<div class="one_line_form">
-						<div class="label">Zip/Postal Code:</div>
-						<div id="bmlt_tools_lookup_address_zip">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-					<div class="one_line_form">
-						<div class="label">Nation:</div>
-						<div id="bmlt_tools_lookup_address_nation">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-					<div class="padding_div_2"></div>
-					<div class="one_line_form" id="bmlt_tools_lookup_long_lat_line" style="display:none">
-						<div class="label">Longitude:</div>
-						<div id="bmlt_tools_lookup_address_long">&nbsp;</div>
-						<div class="label">Latitude:</div>
-						<div id="bmlt_tools_lookup_address_lat">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-					<!-- This is the Google Maps Link. It is shown and hidden dynamically. The href is also set dynamically. -->
-					<div class="one_line_form" id="bmlt_tools_goo_go" style="display:none"><a href="" id="bmlt_tools_goo_go_a" title="Look at this location in Google Maps." target="_blank">Go To Google Maps</a></div>
-					<!-- This is the multiple placemark navigation area. The two links will increment or decrement the placemark. Their links are managed dynamically. -->
-					<div id="bmlt_tools_placemark_rotator_controls" style="display:none">
-						<div id="bmlt_tools_placemark_count_decrement">&nbsp;</div>
-						<div id="bmlt_tools_placemark_count_increment">&nbsp;</div>
-						<div id="bmlt_tools_placemark_count">&nbsp;</div>
-						<div class="clear_both"></div>
-					</div>
-				</div>
-				<div class="clear_both"></div>
-			</div>
-			<!-- This is the map display. -->
-			<div id="bmlt_tools_map_display" style="display:none">
-				<form action="#" onsubmit="return false">
-					<div class="one_line_form">
-						<input type="checkbox" id="bmlt_tools_map_checkbox" onchange="ToggleMapMode()" title="Show the Interactive Map." />
-						<label id="bmlt_tools_map_check_label" for="bmlt_tools_map_checkbox" title="Show the Interactive Map.">Show Map</label>
-					</div>
-				</form>
-				<div id="bmlt_tools_map_div" style="display:none"></div>
-			</div>
-			<!-- This is the debug display. -->
-			<div id="bmlt_tools_debug_display" style="display:none">
-				<form action="#" onsubmit="return false">
-					<div class="one_line_form">
-						<input type="checkbox" id="bmlt_tools_debug_checkbox" onchange="ToggleDebugMode()" title="Show the raw data return from the Google Maps lookup." />
-						<label id="bmlt_tools_debug_check_label" for="bmlt_tools_debug_checkbox" title="Show the raw data return from the Google Maps lookup.">Show Raw Google Maps Response</label>
-					</div>
-				</form>
-				<pre id="bmlt_tools_dump_pre" style="display:none"></pre>
-			</div>
-		</div>
-<!--##END_HTML##-->	
-	</body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7">
+    <meta charset="utf-8">
+    <meta http-equiv="content-type" content="text/javascript">
+    <meta http-equiv="content-type" content="text/css">
+    <link rel="shortcut icon" type="image/png"
+          href="https://bmlt.app/wp-content/uploads/2020/08/cropped-BMLTe-logo-1-32x32.png">
+    <title>Geolocator Tool</title>
+    <!-- https://developers.google.com/maps/documentation/javascript/versions -->
+    <script async
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB9Rpnhy0aqCNiLGF9yHd3Z4X_Humx3Vek&loading=async&callback=GeocodeInitializeOnLoad&v=beta&libraries=marker">
+    </script>
+    <script type="text/javascript" src="assets/geocoder.js"></script>
+    <link rel="stylesheet" href="assets/geocoder.css">
+</head>
+<body>
+<noscript>
+    <h1 style="text-align:center;color:red">THIS WILL NOT WORK, BECAUSE YOU DO NOT HAVE JAVASCRIPT ENABLED.</h1>
+</noscript>
+<div id="bmlt_tools_main_container">
+    <div id="bmlt_tools_address_source_container" style="display:none">
+        <h1>Enter Address</h1>
+        <form action="#" method="get" id="bmlt_tools_address_source_form" onsubmit="FormSubmitted();return false">
+            <div id="bmlt_tools_form_contents">
+                <div class="one_line_form" id="bmlt_tools_address_string_line">
+                    <div class="label">Address:</div>
+                    <div id="bmlt_tools_address_string"></div>
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_street">Street Address:</label>
+                    <input type="text" id="bmlt_tools_address_street" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_other">Other Address:</label>
+                    <input type="text" id="bmlt_tools_address_other" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_borough">Borough/Ku:</label>
+                    <input type="text" id="bmlt_tools_address_borough" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_town">Town:</label>
+                    <input type="text" id="bmlt_tools_address_town" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_county">County/Shire:</label>
+                    <input type="text" id="bmlt_tools_address_county" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_state">State/Province:</label>
+                    <input type="text" id="bmlt_tools_address_state" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_zip">Zip/Postal Code:</label>
+                    <input type="text" id="bmlt_tools_address_zip" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form">
+                    <label for="bmlt_tools_address_nation">Nation:</label>
+                    <input type="text" id="bmlt_tools_address_nation" value="" onchange="UpdateAddressString()"
+                           onkeyup="UpdateAddressString()" onfocus="g_focused_element=this">
+                    <div class="clear_both"></div>
+                </div>
+                <div class="one_line_form" id="bmlt_tools_address_submit_line">
+                    <input type="button" id="bmlt_tools_address_submit" value="Address Lookup"
+                           title="Find address information for this data." onclick="GeocodeAddress()">
+                </div>
+                <div id="bmlt_tools_address_long_lat" style="display:none">
+                    <label for="bmlt_tools_address_long">Longitude:</label>
+                    <input type="text" id="bmlt_tools_address_long" value=""
+                           onchange="if(g_show_map_checkbox)SetMapEntryMarker()"
+                           onkeyup="if(g_show_map_checkbox)SetMapEntryMarker()" onfocus="g_focused_element=this">
+                    <label for="bmlt_tools_address_lat">Latitude:</label>
+                    <input type="text" id="bmlt_tools_address_lat" value=""
+                           onchange="if(g_show_map_checkbox)SetMapEntryMarker()"
+                           onkeyup="if(g_show_map_checkbox)SetMapEntryMarker()" onfocus="g_focused_element=this">
+                    <div id="bmlt_tools_address_reverse_submit_line">
+                        <div id="bmlt_tools_where_am_i" style="display:none">
+                            <input type="button" value="Where Am I?" onclick="WhereAmI()"
+                                   title="Set the Longitude and Latitude to Your Current Location">
+                        </div>
+                        <input type="button" id="bmlt_tools_address_reverse_submit" value="Long/Lat Lookup"
+                               onclick="ReverseLookup()"
+                               title="Do a reverse lookup (find the address) for this longitude and latitude.">
+                    </div>
+                </div>
+                <div class="clear_both"></div>
+            </div>
+        </form>
+        <div class="clear_both"></div>
+    </div>
+    <div id="bmlt_tools_address_transfer_container" style="display:none">
+        <div class="one_line_form_all">
+            <div>
+                <a href="javascript:TransferValue('bmlt_tools_lookup_address_street', 'bmlt_tools_address_street');TransferValue('bmlt_tools_lookup_address_borough', 'bmlt_tools_address_borough');TransferValue('bmlt_tools_lookup_address_town', 'bmlt_tools_address_town');TransferValue('bmlt_tools_lookup_address_county', 'bmlt_tools_address_county');TransferValue('bmlt_tools_lookup_address_state', 'bmlt_tools_address_state');TransferValue('bmlt_tools_lookup_address_zip', 'bmlt_tools_address_zip');TransferValue('bmlt_tools_lookup_address_nation', 'bmlt_tools_address_nation');TransferValue('bmlt_tools_lookup_address_long', 'bmlt_tools_address_long');TransferValue('bmlt_tools_lookup_address_lat', 'bmlt_tools_address_lat');if(g_show_map_checkbox)SetMapEntryMarker()"
+                   title="Transfer all of these values to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="padding_div"></div>
+        <div class="one_line_form">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_street', 'bmlt_tools_address_street')"
+                    title="Transfer the Street Address to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="one_line_form" style="display:none">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_other', 'bmlt_tools_address_other')">&lt;&lt;</a>
+            </div>
+        </div>
+        <div class="one_line_form">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_borough', 'bmlt_tools_address_borough')"
+                    title="Transfer the Borough to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="one_line_form">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_town', 'bmlt_tools_address_town')"
+                    title="Transfer the Town/City to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="one_line_form">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_county', 'bmlt_tools_address_county')"
+                    title="Transfer the County/Shire to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="one_line_form">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_state', 'bmlt_tools_address_state')"
+                    title="Transfer the State/Province to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="one_line_form">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_zip', 'bmlt_tools_address_zip')"
+                    title="Transfer the Zip/Postal Code to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="one_line_form">
+            <div><a href="javascript:TransferValue('bmlt_tools_lookup_address_nation', 'bmlt_tools_address_nation')"
+                    title="Transfer the Nation to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+        <div class="one_line_form" id="bmlt_tools_transfer_long_lat" style="display:none">
+            <div class="padding_div_2"></div>
+            <div>
+                <a href="javascript:TransferValue('bmlt_tools_lookup_address_long', 'bmlt_tools_address_long');TransferValue('bmlt_tools_lookup_address_lat', 'bmlt_tools_address_lat');if(g_show_map_checkbox)SetMapEntryMarker()"
+                   title="Transfer the Longitude and Latitude to the Entry fields.">&lt;&lt;</a></div>
+        </div>
+    </div>
+    <div id="bmlt_tools_address_lookup_container" style="display:none">
+        <h1>Lookup Result</h1>
+        <div id="bmlt_tools_lookup_contents">
+            <div style="padding-bottom: 60px;"></div>
+            <div class="one_line_form">
+                <div class="label">Street Address:</div>
+                <div id="bmlt_tools_lookup_address_street">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div style="padding-bottom: 20px;"></div>
+            <div class="one_line_form">
+                <div class="label">Borough/Ku:</div>
+                <div id="bmlt_tools_lookup_address_borough">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div class="one_line_form">
+                <div class="label">Town:</div>
+                <div id="bmlt_tools_lookup_address_town">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div class="one_line_form">
+                <div class="label">County/Shire:</div>
+                <div id="bmlt_tools_lookup_address_county">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div class="one_line_form">
+                <div class="label">State/Province:</div>
+                <div id="bmlt_tools_lookup_address_state">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div class="one_line_form">
+                <div class="label">Zip/Postal Code:</div>
+                <div id="bmlt_tools_lookup_address_zip">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div class="one_line_form">
+                <div class="label">Nation:</div>
+                <div id="bmlt_tools_lookup_address_nation">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div class="padding_div_2"></div>
+            <div class="one_line_form" id="bmlt_tools_lookup_long_lat_line" style="display:none">
+                <div class="label">Longitude:</div>
+                <div id="bmlt_tools_lookup_address_long">&nbsp;</div>
+                <div class="label">Latitude:</div>
+                <div id="bmlt_tools_lookup_address_lat">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+            <div class="one_line_form" id="bmlt_tools_goo_go" style="display:none"><a href="" id="bmlt_tools_goo_go_a"
+                                                                                      title="Look at this location in Google Maps."
+                                                                                      target="_blank">Go To Google
+                Maps</a></div>
+            <div id="bmlt_tools_placemark_rotator_controls" style="display:none">
+                <div id="bmlt_tools_placemark_count_decrement">&nbsp;</div>
+                <div id="bmlt_tools_placemark_count_increment">&nbsp;</div>
+                <div id="bmlt_tools_placemark_count">&nbsp;</div>
+                <div class="clear_both"></div>
+            </div>
+        </div>
+        <div class="clear_both"></div>
+    </div>
+    <div id="bmlt_tools_map_display" style="display:none">
+        <form action="#" onsubmit="return false">
+            <div class="one_line_form">
+                <input type="checkbox" id="bmlt_tools_map_checkbox" onchange="ToggleMapMode()"
+                       title="Show the Interactive Map.">
+                <label id="bmlt_tools_map_check_label" for="bmlt_tools_map_checkbox" title="Show the Interactive Map.">Show
+                    Map</label>
+            </div>
+        </form>
+        <div id="bmlt_tools_map_div" style="display:none"></div>
+    </div>
+    <div id="bmlt_tools_debug_display" style="display:none">
+        <form action="#" onsubmit="return false">
+            <div class="one_line_form">
+                <input type="checkbox" id="bmlt_tools_debug_checkbox" onchange="ToggleDebugMode()"
+                       title="Show the raw data return from the Google Maps lookup.">
+                <label id="bmlt_tools_debug_check_label" for="bmlt_tools_debug_checkbox"
+                       title="Show the raw data return from the Google Maps lookup.">Show Raw Google Maps
+                    Response</label>
+            </div>
+        </form>
+        <pre id="bmlt_tools_dump_pre" style="display:none"></pre>
+    </div>
+</div>
+</body>
 </html>
