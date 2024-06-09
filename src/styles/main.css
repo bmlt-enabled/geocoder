@@ -256,3 +256,69 @@ a:active {
 		margin-right: 0;
 	}
 }
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+	html,
+	body {
+		background-color: #121212;
+		color: #e0e0e0;
+	}
+
+	#bmlt_tools_main_container {
+		background-color: #1e1e1e;
+		box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+	}
+
+	#bmlt_tools_main_container h1 {
+		background-color: #444;
+		color: #fff;
+	}
+
+	#bmlt_tools_main_container .one_line_form input[type='text'] {
+		background-color: #2c2c2c;
+		border: 1px solid #555;
+		color: #e0e0e0;
+	}
+
+	#bmlt_tools_main_container .one_line_form input[type='button'],
+	#bmlt_tools_main_container .one_line_form input[type='submit'] {
+		background-color: #444;
+		color: #fff;
+	}
+
+	#bmlt_tools_main_container .one_line_form input[type='button']:hover,
+	#bmlt_tools_main_container .one_line_form input[type='submit']:hover {
+		background-color: #666;
+	}
+
+	#bmlt_tools_main_container #bmlt_tools_lookup_container {
+		background-color: #2a2a2a;
+		border: 1px solid #444;
+	}
+
+	#bmlt_tools_debug_display pre {
+		background-color: #2a2a2a;
+		border: 1px solid #444;
+		color: #e0e0e0;
+	}
+
+	a,
+	a:visited {
+		color: #80aaff;
+	}
+
+	a:hover,
+	a:active {
+		color: #ff8080;
+	}
+
+	.lookup-header button {
+		background-color: #444;
+		color: #fff;
+	}
+
+	.lookup-header button:hover {
+		background-color: #666;
+	}
+}
