@@ -1,3 +1,7 @@
+## 2.0.0 (June 8, 2024)
+
+- Convert to Svelte App.
+
 ## 1.4.0 (June 8, 2024)
 
 - Convert to JS ES6.
