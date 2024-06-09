@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<link rel="shortcut icon" type="image/png" href="https://bmlt.app/wp-content/uploads/2020/08/cropped-BMLTe-logo-1-32x32.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script defer async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCH3XnwdESr1_A05jeG1s3My4xDc9MzWno&loading=async&callback=initMap&v=beta&libraries=marker,geocoding"></script>
+		<title>Geolocator Tool</title>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<script>
+			function initMap() {
+				// This function gets replaced by Svelte component
+				if (window.mapReady) {
+					window.mapReady();
+				}
+			}
+		</script>
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

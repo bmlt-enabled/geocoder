@@ -1,4 +1,5 @@
 # geocoder
+
 Google Maps JS Geocoder
 
 GOOGLE MAPS GEOCODER TOOL.
@@ -12,7 +13,7 @@ It has two boxes:
         You enter the address into these fields, and the string below them shows how the address is being "built."
         When you submit the form, a Google Geocode is done, using the "built" address. You can also enter a long/lat pair,
         and do a reverse geocode.
-    
+
     Geocode Response Display
         This is on the right side, and displays the result of the lookup. It displays them as simple <div> elements.
         Between the two forms is a column of links that allows you to copy data from the response to the corresponding
