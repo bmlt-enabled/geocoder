@@ -22,7 +22,6 @@ It has two boxes:
         If there are more than one places that correspond to the given data, they are displayed, one at a time, and links
         are provided to help you select which one is displayed.
 
-
 Bootstrapped using [SvelteKit](https://kit.svelte.dev/). Powered by [Svelte](https://svelte.dev/) and [Vite](https://vitejs.dev/)
 
 ## Developing
@@ -48,4 +47,4 @@ You can preview the production build with `npm run preview`.
 
 ## Deploying
 
-New deploys are done with every push to the main branch.    
+New deploys are done with every push to the main branch.
