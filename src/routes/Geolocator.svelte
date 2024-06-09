@@ -284,23 +284,25 @@
 			<span class="value">{$lookupResult.lat ?? ''}</span>
 		</div>
 	</div>
-	<div>
-		<label class="checkbox-label">
-			<input type="checkbox" bind:checked={$showMap} />
-			Show Map
-		</label>
-		{#if $showMap}
-			<div id="map" style="width:100%; height:500px;"></div>
-		{/if}
-	</div>
-	<div>
-		<label class="checkbox-label">
-			<input type="checkbox" bind:checked={$showDebug} />
-			Show Debug
-		</label>
-		{#if $showDebug}
-			<pre>{JSON.stringify($rawGeocodeResponse, null, 2)}</pre>
-		{/if}
+	<div class="map-container">
+		<div>
+			<label class="checkbox-label">
+				<input type="checkbox" bind:checked={$showMap} />
+				Show Map
+			</label>
+			{#if $showMap}
+				<div id="map"></div>
+			{/if}
+		</div>
+		<div class="debug-container">
+			<label class="checkbox-label">
+				<input type="checkbox" bind:checked={$showDebug} />
+				Show Debug
+			</label>
+			{#if $showDebug}
+				<pre>{JSON.stringify($rawGeocodeResponse, null, 2)}</pre>
+			{/if}
+		</div>
 	</div>
 </div>
 
