@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, afterUpdate } from 'svelte';
 	import { writable, get } from 'svelte/store';
+	import { Loader } from '@googlemaps/js-api-loader';
 
 	const geocoder = writable<google.maps.Geocoder | null>(null);
 	const map = writable<google.maps.Map | null>(null);
@@ -167,24 +168,15 @@
 		updateAddressString();
 	};
 
-	const initializeGeocoder = (): void => {
-		if (typeof google !== 'undefined' && google.maps) {
+	onMount(async() => {
+		const loader = new Loader({
+			apiKey: window.atob('QUl6YVN5RHhfbU1IblB5YlpZRVVsYXBfY1J2UmNKT3kzalcySW9j'),
+			version: 'beta',
+			libraries: ['places', 'marker', 'geocoding'],
+		});
+		loader.load().then((google) => {
 			geocoder.set(new google.maps.Geocoder());
-		} else {
-			window.mapReady = () => {
-				geocoder.set(new google.maps.Geocoder());
-			};
-		}
-	};
-
-	if (typeof window !== 'undefined') {
-		window.mapReady = initializeGeocoder;
-	}
-
-	onMount(() => {
-		if (typeof window !== 'undefined') {
-			initializeGeocoder();
-		}
+		})
 	});
 
 	afterUpdate((): void => {
