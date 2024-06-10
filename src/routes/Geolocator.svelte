@@ -168,15 +168,15 @@
 		updateAddressString();
 	};
 
-	onMount(async() => {
+	onMount(async () => {
 		const loader = new Loader({
 			apiKey: window.atob('QUl6YVN5RHhfbU1IblB5YlpZRVVsYXBfY1J2UmNKT3kzalcySW9j'),
 			version: 'beta',
-			libraries: ['places', 'marker', 'geocoding'],
+			libraries: ['places', 'marker', 'geocoding']
 		});
 		loader.load().then((google) => {
 			geocoder.set(new google.maps.Geocoder());
-		})
+		});
 	});
 
 	afterUpdate((): void => {
