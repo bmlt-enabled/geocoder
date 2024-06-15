@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { onMount, afterUpdate } from 'svelte';
+	import { onMount } from 'svelte';
 	import { writable, get } from 'svelte/store';
 	import { Loader } from '@googlemaps/js-api-loader';
 
-	const geocoder = writable<google.maps.Geocoder | null>(null);
-	const map = writable<google.maps.Map | null>(null);
+	let geocoder: google.maps.Geocoder;
+	let map: google.maps.Map;
+	let mapElement: HTMLElement;
 	const marker = writable<google.maps.marker.AdvancedMarkerElement | null>(null);
 	const showDebug = writable(false);
 	const showMap = writable(false);
@@ -22,21 +23,6 @@
 	let state = '';
 	let zip = '';
 	let nation = '';
-
-	const g_map_zoom = 15;
-
-	const initMap = (): void => {
-		const mapElement = document.getElementById('map');
-		if (mapElement) {
-			const mapInstance = new google.maps.Map(mapElement, {
-				center: { lat: 37, lng: -96 },
-				zoom: g_map_zoom,
-				draggableCursor: 'crosshair',
-				mapId: 'Geocodez'
-			});
-			map.set(mapInstance);
-		}
-	};
 
 	const createMarker = (mapInstance: google.maps.Map, position: google.maps.LatLngLiteral): void => {
 		const markerInstance = new google.maps.marker.AdvancedMarkerElement({
@@ -56,7 +42,7 @@
 
 	const updateMarker = (position: google.maps.LatLngLiteral): void => {
 		const markerInstance = get(marker);
-		const mapInstance = get(map);
+		const mapInstance = map;
 		if (markerInstance && mapInstance) {
 			markerInstance.position = position;
 		} else if (mapInstance) {
@@ -70,14 +56,13 @@
 	};
 
 	const geocodeAddress = (): void => {
-		const geocoderInstance = get(geocoder);
-		if (!geocoderInstance) {
+		if (!geocoder) {
 			console.error('Geocoder is not initialized');
 			return;
 		}
 
 		const address = get(addressString);
-		geocoderInstance.geocode({ address }, (results, status) => {
+		geocoder.geocode({ address }, (results, status) => {
 			if (status === google.maps.GeocoderStatus.OK && results) {
 				const result = results[0];
 				rawGeocodeResponse.set(result); // Store raw response
@@ -98,7 +83,7 @@
 				});
 
 				// Update map and marker
-				if (get(showMap)) {
+				if (mapElement) {
 					updateMarker(result.geometry.location.toJSON());
 				}
 			}
@@ -106,8 +91,7 @@
 	};
 
 	const reverseLookup = (): void => {
-		const geocoderInstance = get(geocoder);
-		if (!geocoderInstance) {
+		if (!geocoder) {
 			console.error('Geocoder is not initialized');
 			return;
 		}
@@ -116,7 +100,7 @@
 		const lat = parseFloat(get(latitude));
 		if (long && lat) {
 			const location = { lat, lng: long };
-			geocoderInstance.geocode({ location }, (results, status) => {
+			geocoder.geocode({ location }, (results, status) => {
 				if (status === google.maps.GeocoderStatus.OK && results) {
 					const result = results[0];
 					rawGeocodeResponse.set(result); // Store raw response
@@ -137,7 +121,7 @@
 					});
 
 					// Update map and marker
-					if (get(showMap)) {
+					if (mapElement) {
 						updateMarker(result.geometry.location.toJSON());
 					}
 				}
@@ -174,14 +158,25 @@
 			version: 'beta',
 			libraries: ['places', 'marker', 'geocoding']
 		});
-		loader.load().then((google) => {
-			geocoder.set(new google.maps.Geocoder());
-		});
-	});
 
-	afterUpdate((): void => {
-		if (get(showMap) && !get(map)) {
-			initMap();
+		const { Map } = await loader.importLibrary('maps');
+
+		mapElement = document.getElementById('map') as HTMLElement;
+		geocoder = new google.maps.Geocoder();
+		if (mapElement) {
+			map = new Map(mapElement, {
+				center: { lat: 37, lng: -96 },
+				zoom: 15,
+				draggableCursor: 'crosshair',
+				mapId: 'Geocodez'
+			});
+
+			showMap.subscribe((value) => {
+				mapElement.style.display = value ? 'block' : 'none';
+				if (value && !get(marker)) {
+					map.setCenter({ lat: 37, lng: -96 });
+				}
+			});
 		}
 	});
 </script>
@@ -290,9 +285,7 @@
 				<input type="checkbox" bind:checked={$showMap} />
 				Show Map
 			</label>
-			{#if $showMap}
-				<div id="map"></div>
-			{/if}
+			<div id="map" class="map-container" style="height: 500px; display: none;"></div>
 		</div>
 		<div class="debug-container">
 			<label class="checkbox-label">
@@ -300,7 +293,7 @@
 				Show Debug
 			</label>
 			{#if $showDebug}
-				<pre>{JSON.stringify($rawGeocodeResponse, null, 2)}</pre>
+				<pre class="debug-text">{JSON.stringify($rawGeocodeResponse, null, 2)}</pre>
 			{/if}
 		</div>
 	</div>

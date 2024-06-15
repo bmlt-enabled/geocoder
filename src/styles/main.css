@@ -237,13 +237,17 @@ a:active {
 }
 
 .debug-container pre {
-	background-color: #f8f8f8;
+	background-color: #ffffff;
 	padding: 15px;
 	border: 1px solid #ccc;
 	border-radius: 8px;
 	margin-top: 15px;
 	font-size: 16px;
 	overflow: auto;
+}
+
+.debug-text {
+	color: #000000;
 }
 
 @media (max-width: 768px) {
@@ -348,5 +352,19 @@ a:active {
 
 	.lookup-header button:hover {
 		background-color: #666;
+	}
+
+	.debug-container pre {
+		background-color: #2a2a2a;
+		padding: 15px;
+		border: 1px solid #ccc;
+		border-radius: 8px;
+		margin-top: 15px;
+		font-size: 16px;
+		overflow: auto;
+	}
+
+	.debug-text {
+		color: #ffffff;
 	}
 }
