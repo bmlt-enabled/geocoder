@@ -191,8 +191,8 @@
 			});
 
 			const autocomplete = new google.maps.places.PlaceAutocompleteElement({});
-			autocomplete.id = 'locationSearch';
-			const locationSearchDiv = document.getElementById('locationSearch') as HTMLElement;
+			autocomplete.id = 'autocomplete-box';
+			const locationSearchDiv = document.getElementById('autocomplete-box') as HTMLElement;
 			locationSearchDiv.appendChild(autocomplete);
 			autocomplete.addEventListener('gmp-placeselect', async (event) => {
 				const placeEvent = event as PlaceSelectEvent;
@@ -221,7 +221,7 @@
 		<form on:submit|preventDefault={() => geocodeAddress()}>
 			<div class="one_line_form">
 				<label for="locationSearch">Location Search:</label>
-				<div id="locationSearch"></div>
+				<div id="autocomplete-box"></div>
 			</div>
 			<div class="one_line_form">
 				<label for="address">Address:</label>
