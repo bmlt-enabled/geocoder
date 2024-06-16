@@ -6,6 +6,7 @@
 	let geocoder: google.maps.Geocoder;
 	let map: google.maps.Map;
 	let mapElement: HTMLElement;
+	let locationSearch: string = '';
 	const marker = writable<google.maps.marker.AdvancedMarkerElement | null>(null);
 	const showDebug = writable(false);
 	const showMap = writable(false);
@@ -177,6 +178,23 @@
 					map.setCenter({ lat: 37, lng: -96 });
 				}
 			});
+
+			if (typeof window !== 'undefined') {
+				const autocomplete = new google.maps.places.Autocomplete(document.getElementById('locationSearch') as HTMLInputElement, { types: ['geocode'] });
+				autocomplete.bindTo('bounds', map);
+				autocomplete.addListener('place_changed', () => {
+					const place = autocomplete.getPlace();
+					if (!place.geometry) return;
+					const location = place.geometry.location;
+					if (location) {
+						longitude.set(location.lng().toString());
+						latitude.set(location.lat().toString());
+						const latLngLiteral = { lat: location.lat(), lng: location.lng() };
+						createMarker(map, latLngLiteral);
+						map.setCenter(latLngLiteral);
+					}
+				});
+			}
 		}
 	});
 </script>
@@ -185,6 +203,10 @@
 	<div>
 		<h1>Enter Address</h1>
 		<form on:submit|preventDefault={() => geocodeAddress()}>
+			<div class="one_line_form">
+				<label for="locationSearch">Location Search:</label>
+				<input id="locationSearch" bind:value={locationSearch} />
+			</div>
 			<div class="one_line_form">
 				<label for="address">Address:</label>
 				<div>{$addressString}</div>

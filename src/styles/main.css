@@ -250,6 +250,10 @@ a:active {
 	color: #000000;
 }
 
+#bmlt_tools_main_container .one_line_form input#locationSearch {
+	flex: 1 1 50%;
+}
+
 @media (max-width: 768px) {
 	#bmlt_tools_main_container {
 		width: 95%;
@@ -286,6 +290,10 @@ a:active {
 	#bmlt_tools_main_container #bmlt_tools_lookup_container div span.label {
 		text-align: left;
 		margin-right: 0;
+	}
+
+	#bmlt_tools_main_container .one_line_form input#locationSearch {
+		width: 50%;
 	}
 }
 
