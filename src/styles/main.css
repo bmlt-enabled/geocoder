@@ -254,6 +254,10 @@ a:active {
 	flex: 1 1 50%;
 }
 
+div.widget-container div.input-container input {
+	flex: 1 1 50%;
+}
+
 @media (max-width: 768px) {
 	#bmlt_tools_main_container {
 		width: 95%;
@@ -293,6 +297,10 @@ a:active {
 	}
 
 	#bmlt_tools_main_container .one_line_form input#locationSearch {
+		width: 50%;
+	}
+
+	div.widget-container div.input-container input {
 		width: 50%;
 	}
 }

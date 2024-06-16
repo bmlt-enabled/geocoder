@@ -6,7 +6,6 @@
 	let geocoder: google.maps.Geocoder;
 	let map: google.maps.Map;
 	let mapElement: HTMLElement;
-	let locationSearch: string = '';
 	const marker = writable<google.maps.marker.AdvancedMarkerElement | null>(null);
 	const showDebug = writable(false);
 	const showMap = writable(false);
@@ -24,6 +23,17 @@
 	let state = '';
 	let zip = '';
 	let nation = '';
+
+	interface PlaceSelectEvent extends Event {
+		place: {
+			fetchFields: (options: { fields: string[] }) => Promise<void>;
+			location: {
+				lng: () => number;
+				lat: () => number;
+			};
+			formattedAddress: string;
+		};
+	}
 
 	const createMarker = (mapInstance: google.maps.Map, position: google.maps.LatLngLiteral): void => {
 		const markerInstance = new google.maps.marker.AdvancedMarkerElement({
@@ -164,6 +174,7 @@
 
 		mapElement = document.getElementById('map') as HTMLElement;
 		geocoder = new google.maps.Geocoder();
+
 		if (mapElement) {
 			map = new Map(mapElement, {
 				center: { lat: 37, lng: -96 },
@@ -179,22 +190,27 @@
 				}
 			});
 
-			if (typeof window !== 'undefined') {
-				const autocomplete = new google.maps.places.Autocomplete(document.getElementById('locationSearch') as HTMLInputElement, { types: ['geocode'] });
-				autocomplete.bindTo('bounds', map);
-				autocomplete.addListener('place_changed', () => {
-					const place = autocomplete.getPlace();
-					if (!place.geometry) return;
-					const location = place.geometry.location;
-					if (location) {
-						longitude.set(location.lng().toString());
-						latitude.set(location.lat().toString());
-						const latLngLiteral = { lat: location.lat(), lng: location.lng() };
-						createMarker(map, latLngLiteral);
-						map.setCenter(latLngLiteral);
-					}
+			const autocomplete = new google.maps.places.PlaceAutocompleteElement({});
+			autocomplete.id = 'locationSearch';
+			const locationSearchDiv = document.getElementById('locationSearch') as HTMLElement;
+			locationSearchDiv.appendChild(autocomplete);
+			autocomplete.addEventListener('gmp-placeselect', async (event) => {
+				const placeEvent = event as PlaceSelectEvent;
+				const place = placeEvent.place;
+				await place.fetchFields({
+					fields: ['displayName', 'formattedAddress', 'location']
 				});
-			}
+				addressString.set(place.formattedAddress);
+				const location = place.location;
+				if (location) {
+					longitude.set(location.lng().toString());
+					latitude.set(location.lat().toString());
+					const latLngLiteral = { lat: location.lat(), lng: location.lng() };
+					createMarker(map, latLngLiteral);
+					map.setCenter(latLngLiteral);
+					reverseLookup();
+				}
+			});
 		}
 	});
 </script>
@@ -205,7 +221,7 @@
 		<form on:submit|preventDefault={() => geocodeAddress()}>
 			<div class="one_line_form">
 				<label for="locationSearch">Location Search:</label>
-				<input id="locationSearch" bind:value={locationSearch} />
+				<div id="locationSearch"></div>
 			</div>
 			<div class="one_line_form">
 				<label for="address">Address:</label>
