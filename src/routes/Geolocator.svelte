@@ -15,14 +15,14 @@
 	const lookupResult = writable<Record<string, string>>({});
 	const rawGeocodeResponse = writable<google.maps.GeocoderResult | null>(null);
 
-	let street = '';
-	let other = '';
-	let borough = '';
-	let town = '';
-	let county = '';
-	let state = '';
-	let zip = '';
-	let nation = '';
+	let street: string = $state('');
+	let other: string = $state('');
+	let borough: string = $state('');
+	let town: string = $state('');
+	let county: string = $state('');
+	let province: string = $state('');
+	let zip: string = $state('');
+	let nation: string = $state('');
 
 	interface PlaceSelectEvent extends Event {
 		place: {
@@ -63,7 +63,7 @@
 	};
 
 	const updateAddressString = (): void => {
-		addressString.set([street, other, borough, town, county, state, zip, nation].filter(Boolean).join(', '));
+		addressString.set([street, other, borough, town, county, province, zip, nation].filter(Boolean).join(', '));
 	};
 
 	const geocodeAddress = (): void => {
@@ -83,7 +83,7 @@
 				}, {});
 				lookupResult.set({
 					nation: components.country || '',
-					state: components.administrative_area_level_1 || '',
+					province: components.administrative_area_level_1 || '',
 					county: components.administrative_area_level_2 || '',
 					town: components.locality || '',
 					borough: components.sublocality_level_1 || '',
@@ -121,7 +121,7 @@
 					}, {});
 					lookupResult.set({
 						nation: components.country || '',
-						state: components.administrative_area_level_1 || '',
+						province: components.administrative_area_level_1 || '',
 						county: components.administrative_area_level_2 || '',
 						town: components.locality || '',
 						borough: components.sublocality_level_1 || '',
@@ -155,7 +155,7 @@
 		borough = result.borough || '';
 		town = result.town || '';
 		county = result.county || '';
-		state = result.state || '';
+		province = result.province || '';
 		zip = result.zip || '';
 		nation = result.nation || '';
 		longitude.set(result.long || '');
@@ -218,7 +218,7 @@
 <div id="bmlt_tools_main_container">
 	<div>
 		<h1>Enter Address</h1>
-		<form on:submit|preventDefault={() => geocodeAddress()}>
+		<form onsubmit={geocodeAddress}>
 			<div class="one_line_form">
 				<label for="locationSearch">Location Search:</label>
 				<div id="autocomplete-box"></div>
@@ -229,35 +229,35 @@
 			</div>
 			<div class="one_line_form">
 				<label for="street">Street Address:</label>
-				<input id="street" bind:value={street} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<input id="street" bind:value={street} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
 				<label for="other">Other Address:</label>
-				<input id="other" bind:value={other} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<input id="other" bind:value={other} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
 				<label for="borough">Borough/Ku:</label>
-				<input id="borough" bind:value={borough} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<input id="borough" bind:value={borough} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
 				<label for="town">Town:</label>
-				<input id="town" bind:value={town} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<input id="town" bind:value={town} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
 				<label for="county">County/Shire:</label>
-				<input id="county" bind:value={county} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<input id="county" bind:value={county} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
-				<label for="state">State/Province:</label>
-				<input id="state" bind:value={state} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<label for="province">State/Province:</label>
+				<input id="province" bind:value={province} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
 				<label for="zip">Zip/Postal Code:</label>
-				<input id="zip" bind:value={zip} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<input id="zip" bind:value={zip} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
 				<label for="nation">Nation:</label>
-				<input id="nation" bind:value={nation} on:change={updateAddressString} on:keyup={updateAddressString} />
+				<input id="nation" bind:value={nation} onchange={updateAddressString} onkeyup={updateAddressString} />
 			</div>
 			<div class="one_line_form">
 				<label for="longitude">Longitude:</label>
@@ -266,18 +266,18 @@
 				<input id="latitude" bind:value={$latitude} />
 			</div>
 			<div class="one_line_form">
-				<input type="button" value="Address Lookup" on:click={geocodeAddress} />
-				<input type="button" value="Long/Lat Lookup" on:click={reverseLookup} />
-				<input type="button" value="Where Am I?" on:click={whereAmI} />
+				<input type="button" value="Address Lookup" onclick={geocodeAddress} />
+				<input type="button" value="Long/Lat Lookup" onclick={reverseLookup} />
+				<input type="button" value="Where Am I?" onclick={whereAmI} />
 			</div>
 		</form>
 	</div>
 	<div id="bmlt_tools_lookup_container">
 		<div class="lookup-header">
 			<h1>
-				<button on:click={transferLookupToAddress}>^^</button>
+				<button onclick={transferLookupToAddress}>^^</button>
 				Lookup Result
-				<button on:click={transferLookupToAddress}>^^</button>
+				<button onclick={transferLookupToAddress}>^^</button>
 			</h1>
 		</div>
 		<div>
@@ -298,7 +298,7 @@
 		</div>
 		<div>
 			<span class="label">State/Province:</span>
-			<span class="value">{$lookupResult.state ?? ''}</span>
+			<span class="value">{$lookupResult.province ?? ''}</span>
 		</div>
 		<div>
 			<span class="label">Zip/Postal Code:</span>
