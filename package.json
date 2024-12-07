@@ -32,5 +32,8 @@
 		"typescript-eslint": "^8.15.0",
 		"vite": "^6.0.0",
 		"@googlemaps/js-api-loader": "^1.16.6"
+	},
+	"resolutions": {
+		"picomatch": "4.0.2"
 	}
 }
