@@ -25,13 +25,17 @@
 	let nation: string = $state('');
 
 	interface PlaceSelectEvent extends Event {
-		place: {
-			fetchFields: (options: { fields: string[] }) => Promise<void>;
-			location: {
-				lng: () => number;
-				lat: () => number;
+		placePrediction: {
+			toPlace: () => {
+				fetchFields: (options: { fields: string[] }) => Promise<void>;
+				location: {
+					lng: () => number;
+					lat: () => number;
+				};
+				formattedAddress: string;
+				displayName: string;
+				toJSON: () => Record<string, unknown>;
 			};
-			formattedAddress: string;
 		};
 	}
 
@@ -189,28 +193,45 @@
 					map.setCenter({ lat: 37, lng: -96 });
 				}
 			});
+			if (typeof window !== 'undefined') {
+				try {
+					const autocomplete = new google.maps.places.PlaceAutocompleteElement({});
+					autocomplete.id = 'criteriaSearch';
 
-			const autocomplete = new google.maps.places.PlaceAutocompleteElement({});
-			autocomplete.id = 'autocomplete-box';
-			const locationSearchDiv = document.getElementById('autocomplete-box') as HTMLElement;
-			locationSearchDiv.appendChild(autocomplete);
-			autocomplete.addEventListener('gmp-placeselect', async (event) => {
-				const placeEvent = event as PlaceSelectEvent;
-				const place = placeEvent.place;
-				await place.fetchFields({
-					fields: ['displayName', 'formattedAddress', 'location']
-				});
-				addressString.set(place.formattedAddress);
-				const location = place.location;
-				if (location) {
-					longitude.set(location.lng().toString());
-					latitude.set(location.lat().toString());
-					const latLngLiteral = { lat: location.lat(), lng: location.lng() };
-					createMarker(map, latLngLiteral);
-					map.setCenter(latLngLiteral);
-					reverseLookup();
+					const locationSearchDiv = document.getElementById('autocomplete-box') as HTMLElement;
+					if (!locationSearchDiv) {
+						console.error('Cannot find autocomplete-box element');
+						return;
+					}
+
+					locationSearchDiv.appendChild(autocomplete);
+
+					autocomplete.addEventListener('gmp-select', async (event) => {
+						const placeEvent = event as PlaceSelectEvent;
+						try {
+							const place = placeEvent.placePrediction.toPlace();
+							await place.fetchFields({
+								fields: ['displayName', 'formattedAddress', 'location']
+							});
+							const location = place.location;
+							if (location) {
+								const latLngLiteral = { lat: location.lat(), lng: location.lng() };
+								longitude.set(location.lng().toString());
+								latitude.set(location.lat().toString());
+								createMarker(map, latLngLiteral);
+								map.setCenter(latLngLiteral);
+								reverseLookup();
+							} else {
+								console.error('No location data in place object');
+							}
+						} catch (error) {
+							console.error('Error processing place selection:', error);
+						}
+					});
+				} catch (error) {
+					console.error('Error setting up autocomplete:', error);
 				}
-			});
+			}
 		}
 	});
 </script>
