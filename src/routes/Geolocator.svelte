@@ -19,7 +19,7 @@
 		forward: google.maps.GeocoderResult | null;
 		reverse: google.maps.GeocoderResult | null;
 	} | null>(null);
-	const geocodingService = writable<'google' | 'nominatim'>('nominatim');
+	const geocodingService = writable<'google' | 'nominatim'>('google');
 	const isReverseLookup = writable(false);
 	let googleMapsLoaded = $state(false);
 	let autocompleteElement: google.maps.places.PlaceAutocompleteElement | null = $state(null);
