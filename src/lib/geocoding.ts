@@ -73,16 +73,9 @@ export type GeocodeResult = {
 	borough: string;
 	street: string;
 	zip: string;
-	long: string;
-	lat: string;
-	location: {
-		lat: number;
-		long: number;
-	};
-	rawResponse?: {
-		forward: google.maps.GeocoderResult | null;
-		reverse: google.maps.GeocoderResult | null;
-	};
+	long: number;
+	lat: number;
+	rawResponse?: google.maps.GeocoderResult | null;
 };
 
 export type GeoLocation = {
@@ -174,6 +167,7 @@ export class Geocoder {
 		const { results, status } = await promisifyGeocode(geocoder, request);
 
 		if (status === google.maps.GeocoderStatus.OK && results) {
+			console.log(results[0]);
 			const location = results[0].geometry.location;
 			const components = results[0].address_components.reduce((acc: Record<string, string>, comp) => {
 				comp.types.forEach((type) => (acc[type] = comp.long_name));
@@ -188,16 +182,9 @@ export class Geocoder {
 				borough: components.sublocality_level_1 || '',
 				street: `${components.street_number || ''} ${components.route || ''}`,
 				zip: components.postal_code || '',
-				long: location.lng().toString(),
-				lat: location.lat().toString(),
-				location: {
-					lat: location.lat(),
-					long: location.lng()
-				},
-				rawResponse: {
-					forward: results[0],
-					reverse: results[0]
-				}
+				long: location.lng(),
+				lat: location.lat(),
+				rawResponse: results[0]
 			};
 		} else {
 			const operation = isReverse ? 'Reverse' : 'Forward';
@@ -277,16 +264,9 @@ export class Geocoder {
 				borough: address.borough || '',
 				street: `${address.house_number || ''} ${address.road || ''}`.trim(),
 				zip: address.postcode || '',
-				long: resultLon.toString(),
-				lat: resultLat.toString(),
-				location: {
-					lat: resultLat,
-					long: resultLon
-				},
-				rawResponse: {
-					forward: forwardData ? forwardData[0] : null,
-					reverse: reverseData
-				}
+				long: resultLon,
+				lat: resultLat,
+				rawResponse: forwardData ? forwardData[0] : reverseData
 			};
 		} catch (error) {
 			const operation = isReverse ? 'Reverse' : 'Forward';

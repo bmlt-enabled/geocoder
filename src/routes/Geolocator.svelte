@@ -15,12 +15,8 @@
 	const latitude = writable('');
 	const addressString = writable('');
 	const lookupResult = writable<Record<string, string>>({});
-	const rawGeocodeResponse = writable<{
-		forward: google.maps.GeocoderResult | null;
-		reverse: google.maps.GeocoderResult | null;
-	} | null>(null);
+	const rawGeocodeResponse = writable<google.maps.GeocoderResult | null>(null);
 	const geocodingService = writable<'google' | 'nominatim'>('google');
-	const isReverseLookup = writable(false);
 	let googleMapsLoaded = $state(false);
 	let autocompleteElement: google.maps.places.PlaceAutocompleteElement | null = $state(null);
 
@@ -221,13 +217,12 @@
 				borough: geocodingResult.borough,
 				street: geocodingResult.street,
 				zip: geocodingResult.zip,
-				long: geocodingResult.long,
-				lat: geocodingResult.lat
+				long: geocodingResult.long.toString(),
+				lat: geocodingResult.lat.toString()
 			});
 			rawGeocodeResponse.set(geocodingResult.rawResponse || null);
-			isReverseLookup.set(false);
 			if (mapElement) {
-				updateMarker({ lat: geocodingResult.location.lat, lng: geocodingResult.location.long });
+				updateMarker({ lat: geocodingResult.lat, lng: geocodingResult.long });
 			}
 		}
 	};
@@ -249,13 +244,12 @@
 					borough: reverseResult.borough,
 					street: reverseResult.street,
 					zip: reverseResult.zip,
-					long: reverseResult.long,
-					lat: reverseResult.lat
+					long: reverseResult.long.toString(),
+					lat: reverseResult.lat.toString()
 				});
 				rawGeocodeResponse.set(reverseResult.rawResponse || null);
-				isReverseLookup.set(true);
 				if (mapElement) {
-					updateMarker({ lat: reverseResult.location.lat, lng: reverseResult.location.long });
+					updateMarker({ lat: reverseResult.lat, lng: reverseResult.long });
 				}
 			}
 		}
@@ -279,8 +273,8 @@
 		province = result.province || '';
 		zip = result.zip || '';
 		nation = result.nation || '';
-		longitude.set(result.long || '');
-		latitude.set(result.lat || '');
+		longitude.set(result.long.toString() || '');
+		latitude.set(result.lat.toString() || '');
 		updateAddressString();
 	};
 
@@ -506,7 +500,7 @@
 				Show Debug
 			</label>
 			{#if $showDebug}
-				<pre class="debug-text">{JSON.stringify($isReverseLookup ? $rawGeocodeResponse?.reverse : $rawGeocodeResponse?.forward, null, 2)}</pre>
+				<pre class="debug-text">{JSON.stringify($rawGeocodeResponse, null, 2)}</pre>
 			{/if}
 		</div>
 	</div>
