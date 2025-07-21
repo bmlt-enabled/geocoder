@@ -38,6 +38,6 @@
 		"vite": "^7.0.0"
 	},
 	"resolutions": {
-		"picomatch": "4.0.2"
+		"picomatch": "4.0.3"
 	}
 }
