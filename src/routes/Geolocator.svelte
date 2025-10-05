@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { writable, get } from 'svelte/store';
-	import { Loader } from '@googlemaps/js-api-loader';
+	import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 	import { Geocoder } from '$lib/geocoding';
 	import type { Map as LeafletMap, Marker as LeafletMarker, DragEndEvent } from 'leaflet';
 	let L: typeof import('leaflet') | null = null;
@@ -46,7 +46,10 @@
 
 	async function createGoogleMap() {
 		if (!mapElement) return;
-
+		setOptions({
+			key: window.atob('QUl6YVN5RHhfbU1IblB5YlpZRVVsYXBfY1J2UmNKT3kzalcySW9j'),
+			v: 'beta'
+		});
 		try {
 			// Clear any existing map
 			if (map) {
@@ -58,13 +61,7 @@
 				map = null;
 			}
 
-			const loader = new Loader({
-				apiKey: window.atob('QUl6YVN5RHhfbU1IblB5YlpZRVVsYXBfY1J2UmNKT3kzalcySW9j'),
-				version: 'beta',
-				libraries: ['places', 'marker', 'geocoding']
-			});
-
-			const { Map } = await loader.importLibrary('maps');
+			const { Map } = await importLibrary('maps');
 			googleMapsLoaded = true;
 
 			// Set up autocomplete as soon as Google Maps is loaded
@@ -351,20 +348,11 @@
 					if (service === 'google') {
 						await createGoogleMap();
 					} else {
-						createLeafletMap();
+						await createLeafletMap();
 					}
 				});
 
-				// Initialize Google Maps loader immediately
-				const loader = new Loader({
-					apiKey: window.atob('QUl6YVN5RHhfbU1IblB5YlpZRVVsYXBfY1J2UmNKT3kzalcySW9j'),
-					version: 'beta',
-					libraries: ['places', 'marker', 'geocoding']
-				});
-
-				// Load Google Maps in the background
-				loader
-					.load()
+				Promise.all([importLibrary('places'), importLibrary('marker'), importLibrary('geocoding')])
 					.then(() => {
 						googleMapsLoaded = true;
 						setupGoogleAutocomplete();
